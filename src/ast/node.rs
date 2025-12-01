@@ -18,6 +18,19 @@ pub enum Node {
     
     ExpressionStmt(Box<Node>),
     
+    FunctionDecl {
+        name: String,
+        parameters: Vec<(String, VarType)>, // (param_name, param_type)
+        return_type: VarType,
+        body: Vec<Node>,
+    },
+    
+    Return {
+        value: Option<Box<Node>>,
+    },
+    
+    Block(Vec<Node>),
+    
     // Expressions
     BinaryOp {
         left: Box<Node>,
@@ -36,6 +49,7 @@ pub enum Node {
     Float(f64),
     Boolean(bool),
     Identifier(String),
+    Null,
     
     // Built-in type declarations
     TypeAnnotation(String),

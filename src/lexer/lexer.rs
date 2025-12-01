@@ -54,7 +54,14 @@ impl Lexer {
         
         match c {
             '+' => Ok(self.make_token(TokenType::Plus, start_line, start_column)),
-            '-' => Ok(self.make_token(TokenType::Minus, start_line, start_column)),
+            '-' => {
+                if self.peek() == '>' {
+                    self.advance();
+                    Ok(self.make_token(TokenType::Arrow, start_line, start_column))
+                } else {
+                    Ok(self.make_token(TokenType::Minus, start_line, start_column))
+                }
+            },
             '*' => Ok(self.make_token(TokenType::Multiply, start_line, start_column)),
             '/' => {
                 if self.peek() == '/' {
@@ -80,6 +87,8 @@ impl Lexer {
             '}' => Ok(self.make_token(TokenType::RightBrace, start_line, start_column)),
             ';' => Ok(self.make_token(TokenType::Semicolon, start_line, start_column)),
             ',' => Ok(self.make_token(TokenType::Comma, start_line, start_column)),
+            ':' => Ok(self.make_token(TokenType::Colon, start_line, start_column)),
+            '&' => Ok(self.make_token(TokenType::Ampersand, start_line, start_column)),
             '\n' => {
                 self.line += 1;
                 self.column = 1;
@@ -106,6 +115,9 @@ impl Lexer {
         
         let token_type = match identifier {
             "let" => TokenType::Let,
+            "fn" => TokenType::Fn,
+            "return" => TokenType::Return,
+            "null" => TokenType::Null,
             "String" => TokenType::TypeString,
             "Int" => TokenType::TypeInt,
             "Bool" => TokenType::TypeBool,

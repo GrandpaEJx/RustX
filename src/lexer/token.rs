@@ -9,6 +9,8 @@ pub enum TokenType {
     
     // Keywords
     Let,
+    Fn,
+    Return,
     TypeString,
     TypeInt,
     TypeBool,
@@ -16,6 +18,7 @@ pub enum TokenType {
     Print,
     Println,
     Printf,
+    Null,
     
     // Operators
     Plus,
@@ -30,6 +33,9 @@ pub enum TokenType {
     GreaterThanEquals,
     NotEquals,
     Modules,
+    Arrow,      // ->
+    Ampersand,  // &
+    Colon,      // :
     
     // Delimiters
     Semicolon,

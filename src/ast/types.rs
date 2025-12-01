@@ -5,6 +5,8 @@ pub enum VarType {
     Bool,
     Float,
     Auto,
+    Ref(Box<VarType>), // For reference types like &str
+    Void,               // For functions with no return value
 }
 
 #[derive(Debug, Clone)]

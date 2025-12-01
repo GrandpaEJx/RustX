@@ -42,6 +42,8 @@ impl Parser {
         }
         
         match &self.current_token.as_ref().unwrap().token_type {
+            TokenType::Fn => self.parse_function_declaration(),
+            TokenType::Return => self.parse_return_statement(),
             TokenType::Let => self.parse_variable_declaration(),
             TokenType::TypeString | TokenType::TypeInt | TokenType::TypeBool | TokenType::TypeFloat => {
                 self.parse_variable_declaration()
@@ -61,7 +63,14 @@ impl Parser {
     }
     
     fn parse_variable_declaration(&mut self) -> Result<Option<Node>> {
-        let var_type = self.consume_type()?;
+        // Check if it's a 'let' declaration or explicit type declaration
+        let var_type = if self.check(TokenType::Let) {
+            self.advance_token(); // consume 'let'
+            VarType::Auto
+        } else {
+            self.consume_type()?
+        };
+        
         let name = self.consume_identifier()?;
         self.consume(TokenType::Equals)?;
         let value = self.parse_expression()?;
@@ -144,6 +153,89 @@ impl Parser {
             name,
             arguments,
         }))
+    }
+    
+    fn parse_function_declaration(&mut self) -> Result<Option<Node>> {
+        self.consume(TokenType::Fn)?;
+        let name = self.consume_identifier()?;
+        
+        // Parse parameters
+        self.consume(TokenType::LeftParen)?;
+        let mut parameters = Vec::new();
+        
+        if !self.check(TokenType::RightParen) {
+            loop {
+                let param_name = self.consume_identifier()?;
+                self.consume(TokenType::Colon)?;
+                let param_type = self.consume_param_type()?;
+                parameters.push((param_name, param_type));
+                
+                if !self.check(TokenType::Comma) {
+                    break;
+                }
+                self.advance_token(); // consume comma
+            }
+        }
+        
+        self.consume(TokenType::RightParen)?;
+        
+        // Parse return type
+        let return_type = if self.check(TokenType::Arrow) {
+            self.advance_token(); // consume ->
+            self.consume_param_type()?
+        } else {
+            VarType::Void
+        };
+        
+        // Parse function body
+        self.consume(TokenType::LeftBrace)?;
+        let mut body = Vec::new();
+        
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            if let Some(stmt) = self.parse_statement()? {
+                body.push(stmt);
+            }
+        }
+        
+        self.consume(TokenType::RightBrace)?;
+        
+        Ok(Some(Node::FunctionDecl {
+            name,
+            parameters,
+            return_type,
+            body,
+        }))
+    }
+    
+    fn parse_return_statement(&mut self) -> Result<Option<Node>> {
+        self.consume(TokenType::Return)?;
+        
+        let value = if self.check(TokenType::Semicolon) || self.check(TokenType::Newline) {
+            None
+        } else {
+            Some(Box::new(self.parse_expression()?))
+        };
+        
+        // Accept either semicolon or newline as statement terminator
+        if self.check(TokenType::Semicolon) {
+            self.advance_token();
+        } else if self.check(TokenType::Newline) {
+            self.advance_token();
+        }
+        
+        Ok(Some(Node::Return { value }))
+    }
+    
+    fn consume_param_type(&mut self) -> Result<VarType> {
+        // Handle reference types like &str
+        if self.check(TokenType::Ampersand) {
+            self.advance_token();
+            let inner_type = self.consume_type()?;
+            return Ok(VarType::Ref(Box::new(inner_type)));
+        }
+        
+        // Handle regular types
+        self.consume_type()
     }
     
     fn parse_expression(&mut self) -> Result<Node> {
@@ -229,6 +321,10 @@ impl Parser {
     
     fn parse_primary(&mut self) -> Result<Node> {
         match &self.current_token.as_ref().unwrap().token_type {
+            TokenType::Null => {
+                self.advance_token();
+                Ok(Node::Null)
+            }
             TokenType::String(s) => {
                 let value = s.clone();
                 self.advance_token();
