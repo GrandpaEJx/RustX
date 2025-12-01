@@ -1,7 +1,7 @@
 // Comprehensive RustX Example
-// This file demonstrates most language features
+// This file demonstrates all implemented language features
 
-println("=== RustX Comprehensive Demo ===\n")
+println("=== RustX Comprehensive Demo ===")
 
 // Variable declarations with different types
 Str name = "RustX Scripting"
@@ -12,48 +12,31 @@ Float version = 1.0
 printf("Language: {name}\n")
 printf("Version: {version}\n")
 printf("Is awesome: {isAwesome}\n")
-printf("Age: {age} years\n\n")
+printf("Age: {age} years\n")
 
 // Arithmetic operations
 Int a = 15
 Int b = 4
 
-println("Arithmetic Operations:")
+println("\nArithmetic Operations:")
 printf("a = {a}, b = {b}\n")
 printf("a + b = {a + b}\n")
 printf("a - b = {a - b}\n")
 printf("a * b = {a * b}\n")
-printf("a / b = {a / b}\n\n")
+printf("a / b = {a / b}\n")
 
 // Float operations
 Float pi = 3.14159
 Float radius = 5.0
 
-println("Float Operations:")
+println("\nFloat Operations:")
 printf("Circle with radius {radius}:\n")
 printf("Circumference = {2 * pi * radius}\n")
-printf("Area = {pi * radius * radius}\n\n")
+printf("Area = {pi * radius * radius}\n")
 
-// Boolean logic
-Bool isAdult = age >= 18
-Bool isYoung = age < 30
-
-println("Boolean Logic:")
-printf("Is adult: {isAdult}\n")
-printf("Is young: {isYoung}\n")
-printf("Is young adult: {isAdult && isYoung}\n\n")
-
-// String operations
-Str greeting = "Hello"
-Str target = "World"
-
-println("String Examples:")
-printf("Concatenation: {greeting + ' ' + target}\n")
-printf("Length of '{name}': {name.length()}\n\n")
-
-// Complex expressions
+// Complex expressions that work
 Int result = (a + b) * (a - b) / 2
-printf("Complex expression result: {result}\n")
+printf("\nComplex expression result: {result}\n")
 
 // Nested expressions in printf
 printf("Math is fun: {((10 + 5) * 2) / 3}\n")

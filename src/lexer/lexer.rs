@@ -1,52 +1,5 @@
 use crate::error::{Error, Result};
-use crate::runtime::Value;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum TokenType {
-    // Literals
-    Identifier(String),
-    String(String),
-    Int(i64),
-    Float(f64),
-    Bool(bool),
-    
-    // Keywords
-    Let,
-    TypeStr,
-    TypeInt,
-    TypeBool,
-    TypeFloat,
-    Print,
-    Println,
-    Printf,
-    
-    // Operators
-    Plus,
-    Minus,
-    Multiply,
-    Divide,
-    Equals,
-    DoubleEquals,
-    
-    // Delimiters
-    Semicolon,
-    Comma,
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
-    
-    // Special
-    EOF,
-    Newline,
-}
-
-#[derive(Debug, Clone)]
-pub struct Token {
-    pub token_type: TokenType,
-    pub line: usize,
-    pub column: usize,
-}
+use super::token::{Token, TokenType};
 
 pub struct Lexer {
     input: String,
@@ -68,7 +21,6 @@ impl Lexer {
     pub fn next_token(&mut self) -> Result<Token> {
         self.skip_whitespace();
         
-        let start_pos = self.position;
         let start_line = self.line;
         let start_column = self.column;
         
@@ -104,7 +56,16 @@ impl Lexer {
             '+' => Ok(self.make_token(TokenType::Plus, start_line, start_column)),
             '-' => Ok(self.make_token(TokenType::Minus, start_line, start_column)),
             '*' => Ok(self.make_token(TokenType::Multiply, start_line, start_column)),
-            '/' => Ok(self.make_token(TokenType::Divide, start_line, start_column)),
+            '/' => {
+                if self.peek() == '/' {
+                    while !self.is_at_end() && self.peek() != '\n' {
+                        self.advance();
+                    }
+                    self.next_token()
+                } else {
+                    Ok(self.make_token(TokenType::Divide, start_line, start_column))
+                }
+            },
             '=' => {
                 if self.peek() == '=' {
                     self.advance();
@@ -145,7 +106,7 @@ impl Lexer {
         
         let token_type = match identifier {
             "let" => TokenType::Let,
-            "Str" => TokenType::TypeStr,
+            "String" => TokenType::TypeString,
             "Int" => TokenType::TypeInt,
             "Bool" => TokenType::TypeBool,
             "Float" => TokenType::TypeFloat,
@@ -201,7 +162,6 @@ impl Lexer {
     fn read_string(&mut self, line: usize, column: usize) -> Result<Token> {
         self.advance(); // Skip opening quote
         
-        let start = self.position;
         let mut string_content = String::new();
         
         while !self.is_at_end() && self.peek() != '"' {
