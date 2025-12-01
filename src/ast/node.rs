@@ -40,7 +40,7 @@ pub enum Node {
     
     FunctionCall {
         name: String,
-        arguments: Vec<Node>,
+        arguments: Vec<(String, Node)>, // (param_name, value) for named args
     },
     
     // Literals
