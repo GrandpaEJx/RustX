@@ -1,1 +1,30 @@
-/target
+# Target directory
+/target/
+
+# Cargo lock file (for binary projects, keep for libraries)
+# Cargo.lock
+
+# IDE files
+/.vscode/
+/.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Rust specific
+*.pdb
+*.dSYM/
+
+# Log files
+*.log
+
+# Environment files
+.env
+.env.local
+
+# Temporary files
+*.tmp
