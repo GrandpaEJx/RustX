@@ -1,7 +1,8 @@
 fn greet(name: &String) -> String {
-    println("Hello from RustX function!")
-    return null
+    printf("Hello from RustX function! hello {}", name)
+    return name
 }
 
 let message = "World"
 println("Testing function support")
+println(greet(name=message))
