@@ -67,9 +67,13 @@ impl Compiler {
                 };
                 
                 self.output.push_str(&format!("    {}(", rust_func));
-                for (i, arg) in arguments.iter().enumerate() {
+                for (i, (param_name, arg)) in arguments.iter().enumerate() {
                     if i > 0 {
                         self.output.push_str(", ");
+                    }
+                    // For named arguments, use param_name=value syntax
+                    if !param_name.is_empty() {
+                        self.output.push_str(&format!("{} = ", param_name));
                     }
                     self.compile_node(arg.clone())?;
                 }
