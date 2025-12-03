@@ -2,6 +2,15 @@
 name = "rustx"
 version = "0.1.0"
 edition = "2021"
+authors = ["Grandpa EJ <>"]
+description = "A minimal scripting language built in Rust with clean syntax and powerful features"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/GrandpaEJx/RustX"
+keywords = ["scripting", "language", "interpreter", "parser", "rust"]
+categories = ["compilers", "parsing", "command-line-utilities"]
+documentation = "https://docs.rs/rustx"
+homepage = "https://github.com/GrandpaEJx/RustX"
 
 [dependencies]
 

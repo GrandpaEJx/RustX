@@ -1,4 +1,4 @@
-# RustX - A Minimal Scripting Language
+# RustX - A Minimal Scripting Language  [BUILD WITH AI]
 
 A lightweight, easy-to-use scripting language built in Rust with a clean, modular architecture.
 
