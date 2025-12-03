@@ -1,13 +1,13 @@
-use rustx::{compile_file, run_file, convert_to_rs, Error};
+use rustx::{compile_file, convert_to_rs, run_file, Error};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
-    
+
     if args.len() < 2 {
         print_help();
         std::process::exit(1);
     }
-    
+
     match args[1].as_str() {
         "--help" | "-h" => {
             print_help();
@@ -23,9 +23,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("Error: Input file must have .rsx extension");
                 std::process::exit(1);
             }
-            
+
             let output_file = input_file.trim_end_matches(".rsx");
-            
+
             match compile_file(input_file) {
                 Ok(rust_code) => {
                     // Write the compiled Rust code to a .rs file
@@ -33,9 +33,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::fs::write(&rs_file, rust_code).map_err(|e| {
                         Error::RuntimeError(format!("Failed to write output file: {}", e))
                     })?;
-                    
+
                     println!("Compiled {} to {}", input_file, rs_file);
-                    
+
                     // Try to compile to binary using rustc
                     match std::process::Command::new("rustc")
                         .arg(&rs_file)
@@ -77,10 +77,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("Error: Input file must have .rsx extension");
                 std::process::exit(1);
             }
-            
+
             let output_file = input_file.trim_end_matches(".rsx");
             let rs_file = format!("{}.rs", output_file);
-            
+
             match convert_to_rs(input_file) {
                 Ok(rust_code) => {
                     std::fs::write(&rs_file, rust_code).map_err(|e| {
@@ -100,7 +100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("Error: File must have .rsx extension");
                 std::process::exit(1);
             }
-            
+
             match run_file(file) {
                 Ok(_) => {
                     // Success - program executed
@@ -112,7 +112,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    
+
     Ok(())
 }
 

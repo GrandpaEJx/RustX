@@ -1,7 +1,7 @@
-pub mod types;
 pub mod node;
 pub mod program;
+pub mod types;
 
-pub use types::{VarType, BinaryOperator};
 pub use node::Node;
 pub use program::Program;
+pub use types::{BinaryOperator, VarType};

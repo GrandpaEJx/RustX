@@ -6,7 +6,7 @@ pub enum TokenType {
     Int(i64),
     Float(f64),
     Bool(bool),
-    
+
     // Keywords
     Let,
     Fn,
@@ -19,7 +19,7 @@ pub enum TokenType {
     Println,
     Printf,
     Null,
-    
+
     // Operators
     Plus,
     Minus,
@@ -33,10 +33,10 @@ pub enum TokenType {
     GreaterThanEquals,
     NotEquals,
     Modules,
-    Arrow,      // ->
-    Ampersand,  // &
-    Colon,      // :
-    
+    Arrow,     // ->
+    Ampersand, // &
+    Colon,     // :
+
     // Delimiters
     Semicolon,
     Comma,
@@ -44,7 +44,7 @@ pub enum TokenType {
     RightParen,
     LeftBrace,
     RightBrace,
-    
+
     // Special
     EOF,
     Newline,

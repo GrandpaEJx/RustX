@@ -11,7 +11,7 @@ impl Program {
             statements: Vec::new(),
         }
     }
-    
+
     pub fn add_statement(&mut self, stmt: Node) {
         self.statements.push(stmt);
     }

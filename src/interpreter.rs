@@ -1,6 +1,6 @@
-use crate::ast::{Node, Program, VarType, BinaryOperator};
+use crate::ast::{BinaryOperator, Node, Program, VarType};
 use crate::error::{Error, Result};
-use crate::runtime::{Value, Environment};
+use crate::runtime::{Environment, Value};
 
 pub struct Interpreter {
     environment: Environment,
@@ -15,11 +15,11 @@ impl Interpreter {
 
     pub fn interpret(&mut self, program: Program) -> Result<Value> {
         let mut result = Value::Null;
-        
+
         for statement in program.statements {
             result = self.interpret_node(statement)?;
         }
-        
+
         Ok(result)
     }
 
@@ -30,30 +30,31 @@ impl Interpreter {
                 self.environment.define(name, val);
                 Ok(Value::Null)
             }
-            
-            Node::ExpressionStmt(expr) => {
-                self.interpret_node(*expr)
-            }
-            
-            Node::FunctionCall { name, arguments } => {
-                self.call_function(&name, arguments)
-            }
-            
+
+            Node::ExpressionStmt(expr) => self.interpret_node(*expr),
+
+            Node::FunctionCall { name, arguments } => self.call_function(&name, arguments),
+
             Node::String(s) => Ok(Value::String(s)),
             Node::Integer(i) => Ok(Value::Integer(i)),
             Node::Float(f) => Ok(Value::Float(f)),
             Node::Boolean(b) => Ok(Value::Boolean(b)),
-            Node::Identifier(name) => {
-                match self.environment.get(&name) {
-                    Some(value) => Ok(value),
-                    None => Err(Error::RuntimeError(format!("Variable '{}' not found", name))),
-                }
-            }
-            
-            Node::BinaryOp { left, operator, right } => {
+            Node::Identifier(name) => match self.environment.get(&name) {
+                Some(value) => Ok(value),
+                None => Err(Error::RuntimeError(format!(
+                    "Variable '{}' not found",
+                    name
+                ))),
+            },
+
+            Node::BinaryOp {
+                left,
+                operator,
+                right,
+            } => {
                 let left_val = self.interpret_node(*left)?;
                 let right_val = self.interpret_node(*right)?;
-                
+
                 match operator {
                     BinaryOperator::Add => self.add_values(left_val, right_val),
                     BinaryOperator::Subtract => self.subtract_values(left_val, right_val),
@@ -63,8 +64,13 @@ impl Interpreter {
                     BinaryOperator::NotEquals => Ok(Value::Boolean(left_val != right_val)),
                 }
             }
-            
-            Node::FunctionDecl { name, parameters, return_type: _, body } => {
+
+            Node::FunctionDecl {
+                name,
+                parameters,
+                return_type: _,
+                body,
+            } => {
                 // Store function definition for later use
                 let func_value = Value::Function {
                     name,
@@ -73,7 +79,7 @@ impl Interpreter {
                 };
                 Ok(func_value)
             }
-            
+
             Node::Return { value } => {
                 if let Some(val) = value {
                     self.interpret_node(*val)
@@ -81,9 +87,9 @@ impl Interpreter {
                     Ok(Value::Null)
                 }
             }
-            
+
             Node::Null => Ok(Value::Null),
-            
+
             _ => Err(Error::RuntimeError("Unsupported node type".to_string())),
         }
     }
@@ -123,7 +129,9 @@ impl Interpreter {
                                 print!("{}", result);
                                 Ok(Value::Null)
                             } else {
-                                Err(Error::RuntimeError("printf requires a string format".to_string()))
+                                Err(Error::RuntimeError(
+                                    "printf requires a string format".to_string(),
+                                ))
                             }
                         } else {
                             Ok(Value::Null)
@@ -172,7 +180,9 @@ impl Interpreter {
             (Value::Float(l), Value::Float(r)) => Ok(Value::Float(l - r)),
             (Value::Integer(l), Value::Float(r)) => Ok(Value::Float(l as f64 - r)),
             (Value::Float(l), Value::Integer(r)) => Ok(Value::Float(l - r as f64)),
-            _ => Err(Error::RuntimeError("Cannot subtract these types".to_string())),
+            _ => Err(Error::RuntimeError(
+                "Cannot subtract these types".to_string(),
+            )),
         }
     }
 
@@ -182,7 +192,9 @@ impl Interpreter {
             (Value::Float(l), Value::Float(r)) => Ok(Value::Float(l * r)),
             (Value::Integer(l), Value::Float(r)) => Ok(Value::Float(l as f64 * r)),
             (Value::Float(l), Value::Integer(r)) => Ok(Value::Float(l * r as f64)),
-            _ => Err(Error::RuntimeError("Cannot multiply these types".to_string())),
+            _ => Err(Error::RuntimeError(
+                "Cannot multiply these types".to_string(),
+            )),
         }
     }
 
@@ -224,7 +236,7 @@ impl Interpreter {
         let mut result = String::new();
         let mut arg_index = 0;
         let mut chars = format.chars().peekable();
-        
+
         while let Some(ch) = chars.next() {
             if ch == '{' {
                 if let Some(_ch2) = chars.next() {
@@ -237,14 +249,14 @@ impl Interpreter {
                 result.push(ch);
             }
         }
-        
+
         Ok(result)
     }
 
     fn interpolate_string(&self, template: &str, values: &[Value]) -> Result<String> {
         let mut result = String::new();
         let mut chars = template.chars().peekable();
-        
+
         while let Some(ch) = chars.next() {
             if ch == '{' {
                 if let Some(_ch2) = chars.next() {
@@ -257,7 +269,7 @@ impl Interpreter {
                 result.push(ch);
             }
         }
-        
+
         Ok(result)
     }
 }

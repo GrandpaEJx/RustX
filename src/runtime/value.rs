@@ -26,19 +26,22 @@ impl Value {
             Value::Function { .. } => Ok("<function>".to_string()),
         }
     }
-    
+
     pub fn as_number(&self) -> Result<f64> {
         match self {
             Value::Integer(i) => Ok(*i as f64),
             Value::Float(f) => Ok(*f),
-            Value::String(s) => s.parse::<f64>().map_err(|_| 
-                Error::RuntimeError(format!("Cannot convert string '{}' to number", s))),
+            Value::String(s) => s.parse::<f64>().map_err(|_| {
+                Error::RuntimeError(format!("Cannot convert string '{}' to number", s))
+            }),
             Value::Boolean(b) => Ok(if *b { 1.0 } else { 0.0 }),
             Value::Null => Ok(0.0),
-            Value::Function { .. } => Err(Error::RuntimeError("Cannot convert function to number".to_string())),
+            Value::Function { .. } => Err(Error::RuntimeError(
+                "Cannot convert function to number".to_string(),
+            )),
         }
     }
-    
+
     pub fn as_bool(&self) -> bool {
         match self {
             Value::Boolean(b) => *b,

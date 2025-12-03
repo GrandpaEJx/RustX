@@ -14,18 +14,18 @@ impl Environment {
             parent: None,
         }
     }
-    
+
     pub fn with_parent(parent: Box<Environment>) -> Self {
         Environment {
             variables: HashMap::new(),
             parent: Some(parent),
         }
     }
-    
+
     pub fn define(&mut self, name: String, value: Value) {
         self.variables.insert(name, value);
     }
-    
+
     pub fn get(&self, name: &str) -> Option<Value> {
         if let Some(value) = self.variables.get(name) {
             Some(value.clone())
@@ -35,7 +35,7 @@ impl Environment {
             None
         }
     }
-    
+
     pub fn assign(&mut self, name: String, value: Value) {
         if self.variables.contains_key(&name) {
             self.variables.insert(name, value);
@@ -45,7 +45,7 @@ impl Environment {
             self.variables.insert(name, value);
         }
     }
-    
+
     pub fn is_empty(&self) -> bool {
         self.variables.is_empty() && self.parent.is_none()
     }
