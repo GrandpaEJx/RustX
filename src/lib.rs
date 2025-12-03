@@ -17,7 +17,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use rustx_lang::run_code;
+//! use grandpa_rustx::run_code;
 //!
 //! fn main() {
 //!     run_code(r#"
@@ -59,7 +59,7 @@ pub use transpiler::Transpiler;
 ///
 /// # Example
 /// ```rust,no_run
-/// use rustx_lang::compile_file;
+/// use grandpa_rustx::compile_file;
 ///
 /// match compile_file("script.rsx") {
 ///     Ok(rust_code) => println!("{}", rust_code),
@@ -87,7 +87,7 @@ pub fn compile_file(path: &str) -> Result<String> {
 ///
 /// # Example
 /// ```rust,no_run
-/// use rustx_lang::run_file;
+/// use grandpa_rustx::run_file;
 ///
 /// if let Err(e) = run_file("script.rsx") {
 ///     println!("Error: {}", e);
@@ -122,7 +122,7 @@ pub fn convert_to_rs(path: &str) -> Result<String> {
 ///
 /// # Example
 /// ```rust
-/// use rustx_lang::run_code;
+/// use grandpa_rustx::run_code;
 ///
 /// fn main() {
 ///     run_code(r#"

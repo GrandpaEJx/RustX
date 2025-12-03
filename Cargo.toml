@@ -9,13 +9,13 @@ readme = "README.md"
 repository = "https://github.com/GrandpaEJx/RustX"
 keywords = ["scripting", "language", "interpreter", "parser", "rust"]
 categories = ["compilers", "parsing", "command-line-utilities"]
-documentation = "https://docs.rs/rustx-lang"
+documentation = "https://docs.rs/grandpa-rustx"
 homepage = "https://github.com/GrandpaEJx/RustX"
 
 [dependencies]
 
 [[bin]]
-name = "rustx-lang"
+name = "grandpa-rustx"
 path = "src/main.rs"
 
 [[bin]]
