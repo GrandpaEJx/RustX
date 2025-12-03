@@ -1,3 +1,37 @@
-pub mod parser;
+use crate::ast::{BinaryOperator, Node, Program, VarType};
+use crate::error::{Error, Result};
+use crate::lexer::{Lexer, Token, TokenType};
 
-pub use parser::Parser;
+pub mod expressions;
+pub mod statements;
+pub mod utils;
+
+pub struct Parser {
+    lexer: Lexer,
+    current_token: Option<Token>,
+    previous_token: Option<Token>,
+}
+
+impl Parser {
+    pub fn new(input: String) -> Self {
+        let mut parser = Parser {
+            lexer: Lexer::new(input),
+            current_token: None,
+            previous_token: None,
+        };
+        parser.advance_token();
+        parser
+    }
+
+    pub fn parse(&mut self) -> Result<Program> {
+        let mut program = Program::new();
+
+        while !self.is_at_end() {
+            if let Some(stmt) = self.parse_statement()? {
+                program.add_statement(stmt);
+            }
+        }
+
+        Ok(program)
+    }
+}
