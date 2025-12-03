@@ -1,4 +1,4 @@
-use rustx::{run_code, Interpreter, Value, Result};
+use rustx_lang::{run_code, Interpreter, Value, Result};
 
 fn main() -> Result<()> {
     // Simple embedding
@@ -15,7 +15,7 @@ fn main() -> Result<()> {
         if let Some(Value::Integer(n)) = args.first() {
             Ok(Value::Integer(n * 2))
         } else {
-            Err(rustx::Error::RuntimeError("Expected integer".to_string()))
+            Err(rustx_lang::Error::RuntimeError("Expected integer".to_string()))
         }
     });
 
@@ -25,7 +25,7 @@ fn main() -> Result<()> {
         println(y)
     "#;
 
-    let mut parser = rustx::Parser::new(code.to_string())?;
+    let mut parser = rustx_lang::Parser::new(code.to_string())?;
     let program = parser.parse()?;
     interpreter.interpret(program)?;
 

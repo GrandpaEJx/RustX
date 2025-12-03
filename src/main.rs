@@ -1,4 +1,4 @@
-use rustx::{compile_file, convert_rs_to_rsx, convert_to_rs, run_file, Error};
+use rustx_lang::{compile_file, convert_rs_to_rsx, convert_to_rs, run_file, Error};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
