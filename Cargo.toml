@@ -19,7 +19,7 @@ name = "rustx-lang"
 path = "src/main.rs"
 
 [[bin]]
-name = "embed_demo"
+name = "rustx-lang-demo"
 path = "demo/embed_demo.rs"
 
 [profile.release]

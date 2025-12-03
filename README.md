@@ -1,4 +1,4 @@
-# RustX - A Minimal Scripting Language  [BUILD WITH AI]
+# RustX-Lang - A Minimal Scripting Language  [BUILD WITH AI]
 
 A lightweight, easy-to-use scripting language built in Rust with a clean, modular architecture.
 
@@ -16,12 +16,12 @@ A lightweight, easy-to-use scripting language built in Rust with a clean, modula
 
 ### Run a Script
 ```bash
-cargo run --bin rustx demo/main.rsx
+cargo run --bin rustx-lang demo/main.rsx
 ```
 
 ### Start REPL
 ```bash
-cargo run --bin rustx
+cargo run --bin rustx-lang
 ```
 
 ### Build
@@ -31,17 +31,17 @@ cargo build
 
 ### Convert Rust to RSX
 ```bash
-cargo run --bin rustx -r main.rs
+cargo run --bin rustx-lang -r main.rs
 ```
 
 ### Convert RSX to Rust
 ```bash
-cargo run --bin rustx -s demo/main.rsx
+cargo run --bin rustx-lang -s demo/main.rsx
 ```
 
 ### Compile to Binary
 ```bash
-cargo run --bin rustx -o demo/main.rsx
+cargo run --bin rustx-lang -o demo/main.rsx
 ```
 
 ## Examples
@@ -73,7 +73,7 @@ RustX can be used as a crate to embed scripting capabilities in your Rust applic
 
 ### Basic Embedding
 ```rust
-use rustx::run_code;
+use rustx_lang::run_code;
 
 fn main() {
     run_code(r#"
@@ -85,14 +85,14 @@ fn main() {
 
 ### Calling Rust Functions from RSX
 ```rust
-use rustx::{Interpreter, Value};
+use rustx_lang::{Interpreter, Value};
 
 let mut interpreter = Interpreter::new();
 interpreter.register_function("double", |args| {
     if let Some(Value::Integer(n)) = args.first() {
         Ok(Value::Integer(n * 2))
     } else {
-        Err(rustx::Error::RuntimeError("Expected integer".to_string()))
+        Err(rustx_lang::Error::RuntimeError("Expected integer".to_string()))
     }
 });
 
@@ -120,17 +120,17 @@ The project is structured with separate, focused modules:
 RustX - A minimal scripting language
 
 Usage:
-  rustx <file.rsx>     Run a RustX script file directly
-  rustx -o <file.rsx>  Compile to binary executable
-  rustx -s <file.rsx>  Convert to Rust (.rs) file
-  rustx -r <file.rs>   Convert Rust (.rs) to RSX (.rsx) file
-  rustx --help         Show this help message
+  rustx-lang <file.rsx>     Run a RustX script file directly
+  rustx-lang -o <file.rsx>  Compile to binary executable
+  rustx-lang -s <file.rsx>  Convert to Rust (.rs) file
+  rustx-lang -r <file.rs>   Convert Rust (.rs) to RSX (.rsx) file
+  rustx-lang --help         Show this help message
 
 Examples:
-  rustx demo/main.rsx       # Run the script
-  rustx -o demo/main.rsx    # Create binary executable
-  rustx -s demo/main.rsx    # Convert to main.rs
-  rustx -r main.rs          # Convert to main.rsx
+  rustx-lang demo/main.rsx       # Run the script
+  rustx-lang -o demo/main.rsx    # Create binary executable
+  rustx-lang -s demo/main.rsx    # Convert to main.rs
+  rustx-lang -r main.rs          # Convert to main.rsx
 ```
 
 ## Contributing
