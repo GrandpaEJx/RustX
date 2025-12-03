@@ -1,16 +1,26 @@
 use crate::ast::{BinaryOperator, Node, Program, VarType};
 use crate::error::{Error, Result};
 use crate::runtime::{Environment, Value};
+use std::collections::HashMap;
 
 pub struct Interpreter {
     environment: Environment,
+    external_functions: HashMap<String, Box<dyn Fn(Vec<Value>) -> Result<Value> + 'static>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Interpreter {
             environment: Environment::new(),
+            external_functions: HashMap::new(),
         }
+    }
+
+    pub fn register_function<F>(&mut self, name: &str, func: F)
+    where
+        F: Fn(Vec<Value>) -> Result<Value> + 'static,
+    {
+        self.external_functions.insert(name.to_string(), Box::new(func));
     }
 
     pub fn interpret(&mut self, program: Program) -> Result<Value> {
@@ -95,61 +105,41 @@ impl Interpreter {
     }
 
     fn call_function(&mut self, name: &str, arguments: Vec<(String, Node)>) -> Result<Value> {
+        // First, interpret all arguments to values
+        let mut args_values = Vec::new();
+        for (_, arg) in &arguments {
+            args_values.push(self.interpret_node(arg.clone())?);
+        }
+
+        // Check if it's an external function
+        if let Some(func) = self.external_functions.get(name) {
+            return func(args_values);
+        }
+
+        // Otherwise, handle built-in functions
         match name {
             "print" => {
-                if let Some((_, arg)) = arguments.first() {
-                    let value = self.interpret_node(arg.clone())?;
+                if let Some(value) = args_values.first() {
                     print!("{}", value);
-                    Ok(Value::Null)
-                } else {
-                    Ok(Value::Null)
                 }
+                Ok(Value::Null)
             }
             "println" => {
-                if let Some((_, arg)) = arguments.first() {
-                    let value = self.interpret_node(arg.clone())?;
+                if let Some(value) = args_values.first() {
                     println!("{}", value);
-                    Ok(Value::Null)
                 } else {
                     println!();
-                    Ok(Value::Null)
                 }
+                Ok(Value::Null)
             }
             "printf" => {
-                if let Some((format_arg, _)) = arguments.first() {
-                    if format_arg == "format" || format_arg.is_empty() {
-                        if let Some((_, format_node)) = arguments.first() {
-                            let format_str = self.interpret_node(format_node.clone())?;
-                            if let Value::String(format_string) = format_str {
-                                let mut args = Vec::new();
-                                for (_, arg) in &arguments[1..] {
-                                    args.push(self.interpret_node(arg.clone())?);
-                                }
-                                let result = self.format_string(&format_string, &args)?;
-                                print!("{}", result);
-                                Ok(Value::Null)
-                            } else {
-                                Err(Error::RuntimeError(
-                                    "printf requires a string format".to_string(),
-                                ))
-                            }
-                        } else {
-                            Ok(Value::Null)
-                        }
-                    } else {
-                        // Handle named arguments like printf("Hello {name}")
-                        let format_str = format_arg.clone();
-                        let mut values = Vec::new();
-                        for (_, arg) in &arguments {
-                            values.push(self.interpret_node(arg.clone())?);
-                        }
-                        let result = self.interpolate_string(&format_str, &values)?;
+                if let Some(format_value) = args_values.first() {
+                    if let Value::String(format_string) = format_value {
+                        let result = self.format_string(&format_string, &args_values[1..])?;
                         print!("{}", result);
-                        Ok(Value::Null)
                     }
-                } else {
-                    Ok(Value::Null)
                 }
+                Ok(Value::Null)
             }
             _ => {
                 // Check if it's a user-defined function

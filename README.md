@@ -16,17 +16,32 @@ A lightweight, easy-to-use scripting language built in Rust with a clean, modula
 
 ### Run a Script
 ```bash
-cargo run demo/main.rsx
+cargo run --bin rustx demo/main.rsx
 ```
 
 ### Start REPL
 ```bash
-cargo run
+cargo run --bin rustx
 ```
 
 ### Build
 ```bash
 cargo build
+```
+
+### Convert Rust to RSX
+```bash
+cargo run --bin rustx -r main.rs
+```
+
+### Convert RSX to Rust
+```bash
+cargo run --bin rustx -s demo/main.rsx
+```
+
+### Compile to Binary
+```bash
+cargo run --bin rustx -o demo/main.rsx
 ```
 
 ## Examples
@@ -52,6 +67,38 @@ print(x + y)  // Output: 15
 print(x / y)  // Output: 2
 ```
 
+## Embedding in Rust Projects
+
+RustX can be used as a crate to embed scripting capabilities in your Rust applications.
+
+### Basic Embedding
+```rust
+use rustx::run_code;
+
+fn main() {
+    run_code(r#"
+        Int x = 42
+        println(x)
+    "#).unwrap();
+}
+```
+
+### Calling Rust Functions from RSX
+```rust
+use rustx::{Interpreter, Value};
+
+let mut interpreter = Interpreter::new();
+interpreter.register_function("double", |args| {
+    if let Some(Value::Integer(n)) = args.first() {
+        Ok(Value::Integer(n * 2))
+    } else {
+        Err(rustx::Error::RuntimeError("Expected integer".to_string()))
+    }
+});
+
+// Now you can call double() from RSX code
+```
+
 ## Architecture
 
 The project is structured with separate, focused modules:
@@ -63,8 +110,28 @@ The project is structured with separate, focused modules:
 - **`runtime.rs`** - Value types and environment management
 - **`interpreter.rs`** - Execution engine with expression evaluation
 - **`builtins.rs`** - Built-in functions library
+- **`transpiler.rs`** - Rust to RSX transpiler
 - **`lib.rs`** - Main library interface and REPL
 - **`main.rs`** - CLI entry point
+
+## CLI Usage
+
+```
+RustX - A minimal scripting language
+
+Usage:
+  rustx <file.rsx>     Run a RustX script file directly
+  rustx -o <file.rsx>  Compile to binary executable
+  rustx -s <file.rsx>  Convert to Rust (.rs) file
+  rustx -r <file.rs>   Convert Rust (.rs) to RSX (.rsx) file
+  rustx --help         Show this help message
+
+Examples:
+  rustx demo/main.rsx       # Run the script
+  rustx -o demo/main.rsx    # Create binary executable
+  rustx -s demo/main.rsx    # Convert to main.rs
+  rustx -r main.rs          # Convert to main.rsx
+```
 
 ## Contributing
 
@@ -73,6 +140,7 @@ The modular architecture makes it easy to extend:
 - Define new AST nodes in `ast.rs`
 - Implement new language features in `parser.rs` and `interpreter.rs`
 - Add built-in functions in `builtins.rs`
+- Add transpiler rules in `transpiler.rs`
 
 ## License
 
