@@ -7,23 +7,30 @@ impl Parser {
     pub fn parse_function_call(&mut self) -> Result<Option<Node>> {
         let name = match &self.current_token.as_ref().unwrap().token_type {
             TokenType::Print => {
-                self.advance_token();
+                self.advance_token()?;
                 "print".to_string()
             }
             TokenType::Println => {
-                self.advance_token();
+                self.advance_token()?;
                 "println".to_string()
             }
             TokenType::Printf => {
-                self.advance_token();
+                self.advance_token()?;
                 "printf".to_string()
             }
             TokenType::Identifier(name) => {
                 let name = name.clone();
-                self.advance_token();
+                self.advance_token()?;
                 name
             }
-            _ => return Err(crate::error::Error::ParseError("Expected function call".to_string())),
+            _ => {
+                let (line, column) = self.current_position();
+                return Err(crate::error::Error::ParseError {
+                    message: "Expected function call".to_string(),
+                    line,
+                    column,
+                });
+            }
         };
 
         self.consume(TokenType::LeftParen)?;
@@ -41,7 +48,7 @@ impl Parser {
                 arguments.push((param_name, value));
 
                 while self.check(TokenType::Comma) {
-                    self.advance_token();
+                    self.advance_token()?;
                     let param_name = self.consume_identifier()?;
                     self.consume(TokenType::Equals)?;
                     let value = self.parse_expression()?;
@@ -52,7 +59,7 @@ impl Parser {
                 arguments.push(("".to_string(), self.parse_expression()?));
 
                 while self.check(TokenType::Comma) {
-                    self.advance_token();
+                    self.advance_token()?;
                     arguments.push(("".to_string(), self.parse_expression()?));
                 }
             }
@@ -62,9 +69,9 @@ impl Parser {
 
         // Accept either semicolon or newline as statement terminator
         if self.check(TokenType::Semicolon) {
-            self.advance_token();
+            self.advance_token()?;
         } else if self.check(TokenType::Newline) {
-            self.advance_token();
+            self.advance_token()?;
         }
 
         Ok(Some(Node::FunctionCall { name, arguments }))
@@ -88,7 +95,7 @@ impl Parser {
                 if !self.check(TokenType::Comma) {
                     break;
                 }
-                self.advance_token(); // consume comma
+                self.advance_token()?; // consume comma
             }
         }
 
@@ -96,7 +103,7 @@ impl Parser {
 
         // Parse return type
         let return_type = if self.check(TokenType::Arrow) {
-            self.advance_token(); // consume ->
+            self.advance_token()?; // consume ->
             self.consume_param_type()?
         } else {
             crate::ast::VarType::Void

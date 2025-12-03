@@ -99,7 +99,7 @@ impl Lexer {
                 self.column = 1;
                 Ok(self.make_token(TokenType::Newline, start_line, start_column))
             }
-            _ => Err(Error::LexerError(format!("Unexpected character: {}", c))),
+            _ => Err(Error::LexerError { message: format!("Unexpected character: {}", c), line: start_line, column: start_column }),
         }
     }
 }

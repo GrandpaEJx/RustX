@@ -11,7 +11,7 @@ impl Parser {
     pub fn parse_statement(&mut self) -> Result<Option<Node>> {
         // Skip newlines
         while self.check(TokenType::Newline) {
-            self.advance_token();
+            self.advance_token()?;
         }
 
         if self.is_at_end() {

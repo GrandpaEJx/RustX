@@ -12,7 +12,7 @@ impl Parser {
         let mut left = self.parse_term()?;
 
         while self.check(TokenType::DoubleEquals) || self.check(TokenType::Equals) {
-            let _operator = self.advance_token().clone();
+            let _operator = self.advance_token()?.clone();
             let right = self.parse_term()?;
 
             left = Node::BinaryOp {
@@ -29,13 +29,20 @@ impl Parser {
         let mut left = self.parse_factor()?;
 
         while self.check(TokenType::Plus) || self.check(TokenType::Minus) {
-            let operator = self.advance_token().clone();
+            let operator = self.advance_token()?.clone();
             let right = self.parse_factor()?;
 
             let operator = match operator.token_type {
                 TokenType::Plus => BinaryOperator::Add,
                 TokenType::Minus => BinaryOperator::Subtract,
-                _ => return Err(crate::error::Error::ParseError("Invalid operator".to_string())),
+                _ => {
+                    let (line, column) = self.current_position();
+                    return Err(crate::error::Error::ParseError {
+                        message: "Invalid operator".to_string(),
+                        line,
+                        column,
+                    });
+                }
             };
 
             left = Node::BinaryOp {
@@ -52,13 +59,20 @@ impl Parser {
         let mut left = self.parse_unary()?;
 
         while self.check(TokenType::Multiply) || self.check(TokenType::Divide) {
-            let operator = self.advance_token().clone();
+            let operator = self.advance_token()?.clone();
             let right = self.parse_unary()?;
 
             let operator = match operator.token_type {
                 TokenType::Multiply => BinaryOperator::Multiply,
                 TokenType::Divide => BinaryOperator::Divide,
-                _ => return Err(crate::error::Error::ParseError("Invalid operator".to_string())),
+                _ => {
+                    let (line, column) = self.current_position();
+                    return Err(crate::error::Error::ParseError {
+                        message: "Invalid operator".to_string(),
+                        line,
+                        column,
+                    });
+                }
             };
 
             left = Node::BinaryOp {
@@ -73,7 +87,7 @@ impl Parser {
 
     pub fn parse_unary(&mut self) -> Result<Node> {
         if self.check(TokenType::Minus) {
-            self.advance_token();
+            self.advance_token()?;
             let operand = self.parse_unary()?;
             return Ok(Node::BinaryOp {
                 left: Box::new(Node::Integer(0)),
@@ -88,36 +102,36 @@ impl Parser {
     pub fn parse_primary(&mut self) -> Result<Node> {
         match &self.current_token.as_ref().unwrap().token_type {
             TokenType::Null => {
-                self.advance_token();
+                self.advance_token()?;
                 Ok(Node::Null)
             }
             TokenType::String(s) => {
                 let value = s.clone();
-                self.advance_token();
+                self.advance_token()?;
                 Ok(Node::String(value))
             }
             TokenType::Int(i) => {
                 let value = *i;
-                self.advance_token();
+                self.advance_token()?;
                 Ok(Node::Integer(value))
             }
             TokenType::Float(f) => {
                 let value = *f;
-                self.advance_token();
+                self.advance_token()?;
                 Ok(Node::Float(value))
             }
             TokenType::Bool(b) => {
                 let value = *b;
-                self.advance_token();
+                self.advance_token()?;
                 Ok(Node::Boolean(value))
             }
             TokenType::Identifier(name) => {
                 let name = name.clone();
-                self.advance_token();
+                self.advance_token()?;
 
                 // Check if this is a function call (identifier followed by left paren)
                 if self.check(TokenType::LeftParen) {
-                    self.advance_token(); // consume LeftParen
+                    self.advance_token()?; // consume LeftParen
 
                     // Parse function call arguments
                     let mut arguments = Vec::new();
@@ -134,7 +148,7 @@ impl Parser {
                             arguments.push((param_name, value));
 
                             while self.check(TokenType::Comma) {
-                                self.advance_token();
+                                self.advance_token()?;
                                 let param_name = self.consume_identifier()?;
                                 self.consume(TokenType::Equals)?;
                                 let value = self.parse_expression()?;
@@ -145,7 +159,7 @@ impl Parser {
                             arguments.push(("".to_string(), self.parse_expression()?));
 
                             while self.check(TokenType::Comma) {
-                                self.advance_token();
+                                self.advance_token()?;
                                 arguments.push(("".to_string(), self.parse_expression()?));
                             }
                         }
@@ -159,15 +173,22 @@ impl Parser {
                 }
             }
             TokenType::LeftParen => {
-                self.advance_token();
+                self.advance_token()?;
                 let expr = self.parse_expression()?;
                 self.consume(TokenType::RightParen)?;
                 Ok(expr)
             }
-            _ => Err(crate::error::Error::ParseError(format!(
-                "Unexpected token: {:?}",
-                self.current_token.as_ref().unwrap().token_type
-            ))),
+            _ => {
+                let (line, column) = self.current_position();
+                Err(crate::error::Error::ParseError {
+                    message: format!(
+                        "Unexpected token: {:?}",
+                        self.current_token.as_ref().unwrap().token_type
+                    ),
+                    line,
+                    column,
+                })
+            }
         }
     }
 }

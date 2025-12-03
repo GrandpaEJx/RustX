@@ -25,7 +25,7 @@ fn main() -> Result<()> {
         println(y)
     "#;
 
-    let mut parser = rustx::Parser::new(code.to_string());
+    let mut parser = rustx::Parser::new(code.to_string())?;
     let program = parser.parse()?;
     interpreter.interpret(program)?;
 

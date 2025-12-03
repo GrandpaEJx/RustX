@@ -59,13 +59,13 @@ impl Lexer {
             TokenType::Float(
                 number_str
                     .parse::<f64>()
-                    .map_err(|_| Error::LexerError(format!("Invalid float: {}", number_str)))?,
+                    .map_err(|_| Error::LexerError { message: format!("Invalid float: {}", number_str), line, column })?,
             )
         } else {
             TokenType::Int(
                 number_str
                     .parse::<i64>()
-                    .map_err(|_| Error::LexerError(format!("Invalid integer: {}", number_str)))?,
+                    .map_err(|_| Error::LexerError { message: format!("Invalid integer: {}", number_str), line, column })?,
             )
         };
 
@@ -104,7 +104,7 @@ impl Lexer {
         }
 
         if self.is_at_end() {
-            return Err(Error::LexerError("Unterminated string".to_string()));
+            return Err(Error::LexerError { message: "Unterminated string".to_string(), line, column });
         }
 
         self.advance(); // Skip closing quote

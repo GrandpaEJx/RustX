@@ -15,9 +15,9 @@ impl Parser {
 
         // Accept either semicolon or newline as statement terminator
         if self.check(TokenType::Semicolon) {
-            self.advance_token();
+            self.advance_token()?;
         } else if self.check(TokenType::Newline) {
-            self.advance_token();
+            self.advance_token()?;
         }
 
         Ok(Some(Node::Return { value }))

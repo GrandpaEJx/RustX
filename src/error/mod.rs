@@ -2,23 +2,23 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum Error {
-    ParseError(String),
+    ParseError { message: String, line: usize, column: usize },
     RuntimeError(String),
     CompilerError(String),
-    LexerError(String),
-    Incomplete,
-    UnexpectedEOF,
+    LexerError { message: String, line: usize, column: usize },
+    Incomplete { line: usize, column: usize },
+    UnexpectedEOF { line: usize, column: usize },
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::ParseError(msg) => write!(f, "Parse Error: {}", msg),
+            Error::ParseError { message, line, column } => write!(f, "Parse Error at line {}, column {}: {}", line, column, message),
             Error::RuntimeError(msg) => write!(f, "Runtime Error: {}", msg),
             Error::CompilerError(msg) => write!(f, "Compiler Error: {}", msg),
-            Error::LexerError(msg) => write!(f, "Lexer Error: {}", msg),
-            Error::Incomplete => write!(f, "Incomplete code"),
-            Error::UnexpectedEOF => write!(f, "Unexpected end of file"),
+            Error::LexerError { message, line, column } => write!(f, "Lexer Error at line {}, column {}: {}", line, column, message),
+            Error::Incomplete { line, column } => write!(f, "Incomplete code at line {}, column {}", line, column),
+            Error::UnexpectedEOF { line, column } => write!(f, "Unexpected end of file at line {}, column {}", line, column),
         }
     }
 }

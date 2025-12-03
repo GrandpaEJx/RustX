@@ -19,7 +19,7 @@ pub use transpiler::Transpiler;
 
 pub fn compile_file(path: &str) -> Result<String> {
     let code = std::fs::read_to_string(path).map_err(|e| Error::RuntimeError(e.to_string()))?;
-    let mut parser = Parser::new(code);
+    let mut parser = Parser::new(code)?;
     let program = parser.parse()?;
     let mut compiler = Compiler::new();
     compiler.compile(program)
@@ -27,7 +27,7 @@ pub fn compile_file(path: &str) -> Result<String> {
 
 pub fn run_file(path: &str) -> Result<()> {
     let code = std::fs::read_to_string(path).map_err(|e| Error::RuntimeError(e.to_string()))?;
-    let mut parser = Parser::new(code);
+    let mut parser = Parser::new(code)?;
     let program = parser.parse()?;
     let mut interpreter = Interpreter::new();
     interpreter.interpret(program)?;
@@ -39,7 +39,7 @@ pub fn convert_to_rs(path: &str) -> Result<String> {
 }
 
 pub fn run_code(code: &str) -> Result<()> {
-    let mut parser = Parser::new(code.to_string());
+    let mut parser = Parser::new(code.to_string())?;
     let program = parser.parse()?;
     let mut interpreter = Interpreter::new();
     interpreter.interpret(program)?;

@@ -13,14 +13,14 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(input: String) -> Self {
+    pub fn new(input: String) -> Result<Self> {
         let mut parser = Parser {
             lexer: Lexer::new(input),
             current_token: None,
             previous_token: None,
         };
-        parser.advance_token();
-        parser
+        parser.advance_token()?;
+        Ok(parser)
     }
 
     pub fn parse(&mut self) -> Result<Program> {
