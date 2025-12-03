@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 pub struct Transpiler;
 

@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOperator, Node, VarType};
+use crate::ast::{BinaryOperator, Node};
 use crate::error::{Error, Result};
 use crate::runtime::Value;
 use super::Interpreter;

@@ -1,5 +1,5 @@
 use crate::ast::Node;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::runtime::Value;
 use super::Interpreter;
 

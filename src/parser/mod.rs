@@ -1,6 +1,6 @@
-use crate::ast::{BinaryOperator, Node, Program, VarType};
-use crate::error::{Error, Result};
-use crate::lexer::{Lexer, Token, TokenType};
+use crate::ast::Program;
+use crate::error::Result;
+use crate::lexer::{Lexer, Token};
 
 pub mod expressions;
 pub mod statements;

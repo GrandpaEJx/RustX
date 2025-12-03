@@ -1,5 +1,5 @@
-use crate::ast::{BinaryOperator, Node, Program, VarType};
-use crate::error::{Error, Result};
+use crate::ast::Program;
+use crate::error::Result;
 use crate::runtime::{Environment, Value};
 use std::collections::HashMap;
 
