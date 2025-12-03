@@ -67,19 +67,66 @@ impl Compiler {
                 };
                 
                 self.output.push_str(&format!("    {}(", rust_func));
-                for (i, (param_name, arg)) in arguments.iter().enumerate() {
-                    if i > 0 {
-                        self.output.push_str(", ");
+                
+                // Handle different function types differently
+                match name.as_str() {
+                    "print" | "println" => {
+                        // For print/println, use format string with {} placeholder
+                        if arguments.len() == 1 {
+                            self.output.push_str("\"{}\", ");
+                            self.compile_node(arguments[0].1.clone())?;
+                        } else {
+                            // Multiple arguments - concatenate them
+                            for (i, (_, arg)) in arguments.iter().enumerate() {
+                                if i > 0 {
+                                    self.output.push_str(", ");
+                                }
+                                self.compile_node(arg.clone())?;
+                            }
+                        }
                     }
-                    // For named arguments, use param_name=value syntax
-                    if !param_name.is_empty() {
-                        self.output.push_str(&format!("{} = ", param_name));
+                    "printf" => {
+                        // For printf, handle string interpolation
+                        if arguments.len() == 1 {
+                            self.output.push_str("\"{}\", ");
+                            self.compile_node(arguments[0].1.clone())?;
+                        } else {
+                            // Check if first argument is a string literal
+                            match &arguments[0].1 {
+                                Node::String(_) => {
+                                    // First arg is format string
+                                    self.compile_node(arguments[0].1.clone())?;
+                                    for (_, arg) in &arguments[1..] {
+                                        self.output.push_str(", ");
+                                        self.compile_node(arg.clone())?;
+                                    }
+                                }
+                                _ => {
+                                    // No format string, just concatenate
+                                    for (i, (_, arg)) in arguments.iter().enumerate() {
+                                        if i > 0 {
+                                            self.output.push_str(", ");
+                                        }
+                                        self.compile_node(arg.clone())?;
+                                    }
+                                }
+                            }
+                        }
                     }
-                    self.compile_node(arg.clone())?;
+                    _ => {
+                        // Regular function calls - use positional arguments only
+                        for (i, (_, arg)) in arguments.iter().enumerate() {
+                            if i > 0 {
+                                self.output.push_str(", ");
+                            }
+                            self.compile_node(arg.clone())?;
+                        }
+                    }
                 }
+                
                 self.output.push_str(");\n");
             },
-            Node::String(s) => self.output.push_str(&format!("\"{}\".to_string()", s)),
+            Node::String(s) => self.output.push_str(&format!("\"{}\"", s)),
             Node::Integer(i) => self.output.push_str(&i.to_string()),
             Node::Float(f) => self.output.push_str(&f.to_string()),
             Node::Boolean(b) => self.output.push_str(&b.to_string()),
@@ -130,6 +177,9 @@ impl Compiler {
                 self.output.push_str("return");
                 if let Some(val) = value {
                     self.output.push_str(" ");
+                    
+                    // Direct compilation without conversion for now
+                    // Type conversion logic can be enhanced later
                     self.compile_node(*val)?;
                 }
                 self.output.push_str(";\n");
@@ -144,12 +194,20 @@ impl Compiler {
     
     fn type_to_string(&self, var_type: &VarType) -> String {
         match var_type {
-            VarType::Str => "String".to_string(),
+            VarType::Str => "&str".to_string(),  // Use &str for string references
             VarType::Int => "i64".to_string(),
             VarType::Bool => "bool".to_string(),
             VarType::Float => "f64".to_string(),
             VarType::Auto => "".to_string(),
-            VarType::Ref(inner) => format!("&{}", self.type_to_string(inner)),
+            VarType::Ref(inner) => {
+                let inner_str = self.type_to_string(inner);
+                // Avoid double references like &&str
+                if inner_str.starts_with('&') {
+                    inner_str  // Don't add another &
+                } else {
+                    format!("&{}", inner_str)
+                }
+            },
             VarType::Void => "()".to_string(),
         }
     }

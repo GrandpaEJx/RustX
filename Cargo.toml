@@ -1,6 +1,20 @@
 [package]
 name = "rustx"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
+
+[[bin]]
+name = "rustx"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+debug = false
+strip = true
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true

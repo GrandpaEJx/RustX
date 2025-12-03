@@ -1,6 +1,7 @@
 use super::value::Value;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct Environment {
     variables: HashMap<String, Value>,
     parent: Option<Box<Environment>>,
