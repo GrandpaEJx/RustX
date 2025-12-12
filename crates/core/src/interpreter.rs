@@ -60,9 +60,17 @@ pub struct Interpreter {
 impl Interpreter {
     /// Creates a new interpreter
     pub fn new() -> Self {
-        Interpreter {
+        let mut interpreter = Interpreter {
             env: Environment::new(),
-        }
+        };
+        interpreter.init_builtins();
+        interpreter
+    }
+
+    /// Initializes built-in functions
+    fn init_builtins(&mut self) {
+        // Built-in print function (placeholder - will be enhanced later)
+        // For now, we'll add range as a special case in eval_call
     }
 
     /// Evaluates a program (list of statements)
@@ -283,6 +291,15 @@ impl Interpreter {
 
     /// Evaluates a function call
     fn eval_call(&mut self, callee: Expr, args: Vec<Expr>) -> Result<Value, String> {
+        // Check for built-in functions first
+        if let Expr::Ident(name) = &callee {
+            if name == "range" {
+                return self.builtin_range(args);
+            } else if name == "print" {
+                return self.builtin_print(args);
+            }
+        }
+
         let func = self.eval_expr(callee)?;
 
         match func {
@@ -309,6 +326,61 @@ impl Interpreter {
             }
             _ => Err("Not a callable function".to_string()),
         }
+    }
+
+    /// Built-in range function: range(end) or range(start, end) or range(start, end, step)
+    fn builtin_range(&mut self, args: Vec<Expr>) -> Result<Value, String> {
+        let (start, end, step) = match args.len() {
+            1 => {
+                let end = self.eval_expr(args[0].clone())?.as_int()?;
+                (0, end, 1)
+            }
+            2 => {
+                let start = self.eval_expr(args[0].clone())?.as_int()?;
+                let end = self.eval_expr(args[1].clone())?.as_int()?;
+                (start, end, 1)
+            }
+            3 => {
+                let start = self.eval_expr(args[0].clone())?.as_int()?;
+                let end = self.eval_expr(args[1].clone())?.as_int()?;
+                let step = self.eval_expr(args[2].clone())?.as_int()?;
+                if step == 0 {
+                    return Err("range step cannot be zero".to_string());
+                }
+                (start, end, step)
+            }
+            _ => return Err("range() takes 1, 2, or 3 arguments".to_string()),
+        };
+
+        let mut result = Vec::new();
+        if step > 0 {
+            let mut i = start;
+            while i < end {
+                result.push(Value::Int(i));
+                i += step;
+            }
+        } else {
+            let mut i = start;
+            while i > end {
+                result.push(Value::Int(i));
+                i += step;
+            }
+        }
+
+        Ok(Value::Array(result))
+    }
+
+    /// Built-in print function
+    fn builtin_print(&mut self, args: Vec<Expr>) -> Result<Value, String> {
+        for (i, arg) in args.iter().enumerate() {
+            if i > 0 {
+                print!(" ");
+            }
+            let val = self.eval_expr(arg.clone())?;
+            print!("{}", val);
+        }
+        println!();
+        Ok(Value::Null)
     }
 
     /// Evaluates index access
