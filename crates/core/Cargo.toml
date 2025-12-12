@@ -1,0 +1,9 @@
+[package]
+name = "rustx_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Dependencies will be added as needed (e.g., regex, lazy_static)
