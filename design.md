@@ -1,364 +1,150 @@
-# RustX Advanced Features Design
+# RustX Language Design Specification
 
-## Overview
+## 1. Philosophy
 
-This document outlines the design for advanced language features in RustX: inheritance system, module system, imports, and additional language constructs.
+**"Clean. Minimal. Seamless."**
+RustX (Crate: `rustx-lang`) is designed to be a lightweight scripting language that lives comfortably inside Rust projects. It avoids boilerplate, favoring inference and minimal syntax.
 
-## 1. Inheritance System
+## 2. Syntax
 
-### 1.1 Class Definitions
+### 2.1 Comments
 
-**Syntax:**
-```
-class ClassName {
-    // Fields
-    Type fieldName
+C-style comments are used.
 
-    // Methods
-    fn methodName(param: Type) -> ReturnType {
-        // body
-    }
-}
-
-class ChildClass extends ParentClass {
-    // Additional fields and methods
-}
+```rustx-lang
+// Single line comment
+/* Multi-line
+   comment */
 ```
 
-**Examples:**
+### 2.2 Variables & Types
+
+Dynamic typing. No keywords (`let`, `var`) required for declaration.
+
+```rustx
+x = 10              // Int
+ratio = 3.14        // Float
+name = "RustX"      // String
+is_valid = true     // Bool
+list = [1, 2, 3]    // Array
+obj = { "x": 1 }    // Map
 ```
-class Animal {
-    Str name
-    Int age
 
-    fn speak() {
-        println("Animal speaks")
-    }
+### 2.3 Blocks & Scope
 
-    fn get_age() -> Int {
-        return this.age
-    }
-}
+Braces `{}` define blocks. Semicolons `;` are optional and inferred by newlines.
 
-class Dog extends Animal {
-    Str breed
-
-    fn speak() {
-        println("{this.name} barks!")
-    }
-
-    fn fetch(item: Str) {
-        println("{this.name} fetches {item}")
-    }
+```rustx
+{
+    inner = 5
+    // inner is dropped at end of block
 }
 ```
 
-### 1.2 Object Instantiation
+### 2.4 Control Flow
 
-**Syntax:**
-```
-ClassName obj = new ClassName()
-obj.field = value
-obj.method()
-```
+Everything is an expression.
 
-**Examples:**
-```
-Dog myDog = new Dog()
-myDog.name = "Buddy"
-myDog.age = 3
-myDog.breed = "Golden Retriever"
-myDog.speak()        // Buddy barks!
-myDog.fetch("ball")  // Buddy fetches ball
+**If/Else:**
+
+```rustx
+status = if score > 90 { "A" } else { "B" }
 ```
 
-### 1.3 Implementation Details
+**Loops:**
 
-**AST Nodes:**
-- `ClassDecl { name, fields: Vec<Field>, methods: Vec<FunctionDecl>, parent: Option<String> }`
-- `ObjectInstantiation { class_name }`
-- `MethodCall { object, method_name, arguments }`
-- `FieldAccess { object, field_name }`
-- `This` (identifier for self-reference)
+```rustx
+// For-in loop
+for item in list {
+    print(item)
+}
 
-**Runtime:**
-- `Value::Object { class_name, fields: HashMap<String, Value>, methods: HashMap<String, Function> }`
-- Method resolution: check class, then parent classes
-- Field access: direct lookup in object fields
-
-## 2. Module System
-
-### 2.1 Module Definitions
-
-**Syntax:**
-```
-module module_name {
-    // Classes, functions, variables
-    class MyClass { ... }
-    fn my_function() { ... }
-    Str global_var = "value"
+// While loop
+while x > 0 {
+    x = x - 1
 }
 ```
 
-**Examples:**
-```
-module animals {
-    class Cat {
-        Str name
-        fn meow() { println("{this.name} meows") }
-    }
+### 2.5 Functions
 
-    fn create_cat(name: Str) -> Cat {
-        Cat cat = new Cat()
-        cat.name = name
-        return cat
-    }
-}
+Functions are first-class.
 
-module utils {
-    fn print_hello(name: Str) {
-        println("Hello {name}!")
-    }
+**Standard:**
+
+```rustx
+fn add(a, b) {
+    if a < 0 { return 0 }
+    a + b  // Implicit return
 }
 ```
 
-### 2.2 Import System
+**Short (Arrow):**
 
-**Syntax:**
-```
-import module_name
-import module_name.item_name
-import module_name as alias
+```rustx
+fn sub(a, b) => a - b
 ```
 
-**Examples:**
-```
-import animals
-import utils.print_hello
-import animals as pet_module
+## 3. Rust Interop (The "Seamless" Feature)
 
-Cat myCat = animals.create_cat("Whiskers")
-utils.print_hello("World")
-print_hello("Direct import")
-pet_module.create_cat("Fluffy")
-```
+### 3.1 Macros
 
-### 2.3 Namespaced Access
+The `rustx-lang` crate provides two main macros:
 
-**Syntax:**
-```
-module_name::item_name
-```
+- `rx! { ... }`: Evaluates an expression/block and returns a value.
+- `rsx! { ... }`: Alias/Variant (can be used for specific modes or side-effects).
 
-**Examples:**
-```
-animals::create_cat("Test")
-utils::print_hello("Test")
+### 3.2 Context Capture
+
+Script code inside macros can "see" local Rust variables.
+
+**Rust Side:**
+
+```rust
+let factor = 2;
+let result: i64 = rx! {
+    val = 10
+    val * factor  // 'factor' is captured from Rust
+};
 ```
 
-### 2.4 Implementation Details
+**Type Conversion:**
 
-**AST Nodes:**
-- `ModuleDecl { name, body: Vec<Node> }`
-- `ImportStmt { module, item: Option<String>, alias: Option<String> }`
+- `Rust -> RustX`: Via `From/Into` traits (Primitives, String, Vec, HashMap).
+- `RustX -> Rust`: The return value of the macro block is converted back to the requested Rust type.
 
-**Runtime:**
-- Module environment: `HashMap<String, Environment>`
-- Import resolution: copy items from module to current environment
-- Namespaced access: traverse module hierarchy
+## 4. Modules & Imports
 
-## 3. Additional Language Features
+### 4.1 File Extensions
 
-### 3.1 Arrays
+- `.rsx`: Standard script file.
+- `.rsl`: Rust Script Library (intended for imports).
 
-**Syntax:**
-```
-Type[] array_name = [value1, value2, value3]
-array_name[index] = new_value
-Type value = array_name[index]
-```
+### 4.2 Import System
 
-**Examples:**
-```
-Int[] numbers = [1, 2, 3, 4, 5]
-numbers[0] = 10
-println(numbers[2])  // 3
+Imports are simplistic.
 
-Str[] names = ["Alice", "Bob", "Charlie"]
-names[1] = "Dave"
+```rustx
+import "math.rsl" as math
+
+result = math.calc(10)
 ```
 
-### 3.2 Control Flow
+## 5. Runtime Architecture
 
-#### If/Else Statements
-**Syntax:**
-```
-if (condition) {
-    // statements
-} else if (condition) {
-    // statements
-} else {
-    // statements
-}
-```
+### 5.1 Values
 
-**Examples:**
-```
-if (x > 10) {
-    println("x is greater than 10")
-} else if (x > 5) {
-    println("x is greater than 5")
-} else {
-    println("x is small")
-}
-```
+The internal `Value` enum supports:
 
-#### While Loops
-**Syntax:**
-```
-while (condition) {
-    // statements
-}
-```
+- `Null`
+- `Int` (i64)
+- `Float` (f64)
+- `Bool`
+- `String`
+- `Array` (Vec<Value>)
+- `Map` (HashMap<String, Value>)
+- `Function`
+- `RustFn` (Native extensions using `Arc<dyn Fn...>`)
 
-**Examples:**
-```
-Int i = 0
-while (i < 10) {
-    println(i)
-    i = i + 1
-}
-```
+### 5.2 Error Handling
 
-#### For Loops
-**Syntax:**
-```
-for (item in array) {
-    // statements using item
-}
-```
-
-**Examples:**
-```
-Int[] numbers = [1, 2, 3, 4, 5]
-for (num in numbers) {
-    println(num)
-}
-```
-
-### 3.3 Implementation Details
-
-**AST Nodes:**
-- `ArrayLiteral { elements: Vec<Node> }`
-- `ArrayAccess { array, index }`
-- `IfStmt { condition, then_branch, else_branch: Option<Node> }`
-- `WhileStmt { condition, body }`
-- `ForStmt { iterator, iterable, body }`
-
-**Runtime:**
-- `Value::Array(Vec<Value>)`
-- Control flow evaluation with proper scoping
-- Iterator protocol for for loops
-
-## 4. Parser Extensions
-
-### 4.1 New Keywords
-- `class`, `extends`, `new`, `this`
-- `module`, `import`, `as`
-- `if`, `else`, `while`, `for`, `in`
-
-### 4.2 New Tokens
-- `CLASS`, `EXTENDS`, `NEW`, `THIS`
-- `MODULE`, `IMPORT`, `AS`
-- `IF`, `ELSE`, `WHILE`, `FOR`, `IN`
-- `LBRACKET`, `RBRACKET` for arrays
-- `DOUBLE_COLON` for namespacing
-
-## 5. Interpreter Extensions
-
-### 5.1 Environment Hierarchy
-- Global environment
-- Module environments
-- Function scopes
-- Block scopes
-
-### 5.2 Method Resolution
-1. Check object class methods
-2. Check parent class methods (recursive)
-3. Check global functions
-
-### 5.3 Import Resolution
-1. Load module if not loaded
-2. Copy requested items to current environment
-3. Handle name conflicts with aliases
-
-## 6. Transpiler Updates
-
-### 6.1 Class Transpilation
-```
-class Dog extends Animal {
-    Str breed
-    fn speak() { println("Woof") }
-}
-```
-↓
-```
-struct Dog {
-    name: String,
-    age: i64,
-    breed: String,
-}
-
-impl Dog {
-    fn speak(&self) {
-        println!("Woof");
-    }
-}
-```
-
-### 6.2 Module Transpilation
-```
-module animals {
-    class Dog { ... }
-}
-```
-↓
-```
-mod animals {
-    struct Dog { ... }
-}
-```
-
-## 7. Error Handling
-
-### 7.1 Inheritance Errors
-- Circular inheritance
-- Undefined parent class
-- Method signature mismatch
-
-### 7.2 Module Errors
-- Module not found
-- Import conflicts
-- Undefined symbols
-
-### 7.3 Runtime Errors
-- Null pointer access
-- Array bounds errors
-- Type mismatches
-
-## 8. Testing Strategy
-
-### 8.1 Unit Tests
-- AST node creation
-- Parser correctness
-- Interpreter evaluation
-
-### 8.2 Integration Tests
-- Complete programs with inheritance
-- Module interactions
-- Import resolution
-
-### 8.3 Example Programs
-- Animal hierarchy
-- Math utilities module
-- Game with objects and arrays
+Result-based `Rv<T>` (Result Value). No panics allowed. Errors propagate up to the host Rust application.

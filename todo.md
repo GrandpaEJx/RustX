@@ -1,28 +1,36 @@
-# RustX Advanced Features TODO
+# RustX Language Project TODO & Rules
 
-## Inheritance System
-- [x] Design inheritance system (classes/structs with inheritance)
-- [ ] Implement class/struct AST nodes
-- [ ] Add inheritance parsing to parser
-- [ ] Extend interpreter for object-oriented features
+> [!IMPORTANT] > **Engineering Rules (Highly Refactored & Maintainable)**
+>
+> 1.  **Modularity**: Functions must be small and focused. No 100-line functions.
+> 2.  **Safety**: No `unwrap()` in production code. Use `Result` and `Option` propagation.
+> 3.  **Typos**: Zero tolerance for typos in variable names or comments.
+> 4.  **Documentation**: All public structs and functions must have doc comments (`///`).
+> 5.  **Clean Architecture**: Separation of concerns between Lexer, Parser, and AST.
 
-## Module System
-- [ ] Design module system (namespaces, modules)
-- [ ] Implement import statement parsing
-- [ ] Add module loading and resolution
-- [ ] Implement module environment scoping
+## Roadmap
 
-## Additional Language Features
-- [ ] Add useful language features (arrays, loops, conditionals)
-- [ ] Update transpiler for new features
+### Phase 1: Core Engine (Refactored)
 
-## Testing & Documentation
-- [ ] Test inheritance and modules
-- [ ] Update documentation
+- [/] Initialize Workspace (`rustx-lang` with `core`, `macros`, `cli`)
+- [ ] **Lexer**: Implement `Token` enum and tokenizer with `//` comments support.
+- [ ] **AST**: Define minimal `Expr` and `Stmt` nodes.
+- [ ] **Parser**: Recursive descent parser with error recovery.
+- [ ] **Interpreter**: Tree-walk interpreter for expressions.
 
-## Completed Features
-- [x] RS to RSX transpiler
-- [x] RSX embedding in Rust
-- [x] Calling Rust functions from RSX
-- [x] Enhanced CLI
-- [x] Crate integration
+### Phase 2: Interop & Macros
+
+- [ ] **Macro Logic**: Implement `rx!` parsing using `syn`.
+- [ ] **Context Capture**: Mechanism to discover and inject Rust variables.
+- [ ] **Type Conversion**: Traits for `Rust -> Value` and `Value -> Rust`.
+
+### Phase 3: Standalone & Imports
+
+- [ ] **CLI**: `rustx` binary implementation.
+- [ ] **Import System**: Resolver for `.rsl` files.
+- [ ] **Std Lib**: Basic string/math functions.
+
+### Phase 4: Final Polish
+
+- [ ] Comprehensive Testing (Unit + Integration).
+- [ ] Verify "Seamless" Experience.
