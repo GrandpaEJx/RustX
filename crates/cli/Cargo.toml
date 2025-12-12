@@ -1,0 +1,16 @@
+[package]
+name = "rustx-lang" # Preserving the original project name for the binary
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+default-run = "rustx_lang"
+
+[[bin]]
+name = "rustx_lang"
+path = "src/main.rs"
+
+[dependencies]
+rustx_core = { path = "../core" }
+rustx_macros = { path = "../macros" }
+clap = { version = "4.4", features = ["derive"] }
