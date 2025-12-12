@@ -18,11 +18,6 @@ impl Parser {
         self.tokens.get(self.current).unwrap_or(&Token::Eof)
     }
 
-    /// Peeks at the next token
-    fn peek(&self) -> &Token {
-        self.tokens.get(self.current + 1).unwrap_or(&Token::Eof)
-    }
-
     /// Advances to the next token
     fn advance(&mut self) -> &Token {
         if self.current < self.tokens.len() {
