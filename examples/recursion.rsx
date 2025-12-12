@@ -1,4 +1,4 @@
-// Fibonacci function
+// Fibonacci function (recursive)
 fn fib(n) {
     if n <= 1 {
         n
@@ -7,15 +7,7 @@ fn fib(n) {
     }
 }
 
-// Calculate first 10 Fibonacci numbers
-results = []
-i = 0
-while i < 10 {
-    results = results  // Note: array append not yet implemented
-    i = i + 1
-}
-
-// Factorial function
+// Factorial function (recursive)
 fn factorial(n) {
     if n <= 1 {
         1
@@ -24,4 +16,10 @@ fn factorial(n) {
     }
 }
 
-factorial(5)
+// Test factorial
+result = factorial(5)
+
+// Test fibonacci (small number to avoid slowness)
+fib_result = fib(10)
+
+result
