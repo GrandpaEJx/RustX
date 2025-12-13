@@ -321,5 +321,129 @@ impl Interpreter {
             _ => Err("round() requires a number".to_string()),
         }
     }
+    // === ARRAY FUNCTIONS ===
+
+    /// Core logic for map
+    pub(super) fn logic_map(&mut self, arr: Value, callback: Expr) -> Result<Value, String> {
+         let items = match arr {
+            Value::Array(a) => a,
+            _ => return Err("map() requires an array".to_string()),
+        };
+
+        let callback_val = self.eval_expr(callback)?;
+        let mut new_arr = Vec::new();
+        for item in items {
+            new_arr.push(self.apply_function(callback_val.clone(), vec![item])?);
+        }
+        Ok(Value::Array(new_arr))
+    }
+
+    /// Built-in map function (standalone)
+    pub(super) fn builtin_map(&mut self, args: Vec<Expr>) -> Result<Value, String> {
+        if args.len() != 2 {
+            return Err("map() takes exactly 2 arguments: array and callback".to_string());
+        }
+        let arr = self.eval_expr(args[0].clone())?;
+        self.logic_map(arr, args[1].clone())
+    }
+
+    /// Core logic for filter
+    pub(super) fn logic_filter(&mut self, arr: Value, callback: Expr) -> Result<Value, String> {
+        let items = match arr {
+            Value::Array(a) => a,
+            _ => return Err("filter() requires an array".to_string()),
+        };
+
+        let callback_val = self.eval_expr(callback)?;
+        let mut new_arr = Vec::new();
+        for item in items {
+            let result = self.apply_function(callback_val.clone(), vec![item.clone()])?;
+            if result.is_truthy() {
+                new_arr.push(item);
+            }
+        }
+        Ok(Value::Array(new_arr))
+    }
+
+    /// Built-in filter function (standalone)
+    pub(super) fn builtin_filter(&mut self, args: Vec<Expr>) -> Result<Value, String> {
+        if args.len() != 2 {
+            return Err("filter() takes exactly 2 arguments: array and callback".to_string());
+        }
+        let arr = self.eval_expr(args[0].clone())?;
+        self.logic_filter(arr, args[1].clone())
+    }
+
+    /// Core logic for reduce
+    pub(super) fn logic_reduce(&mut self, arr: Value, callback: Expr, initial: Option<Expr>) -> Result<Value, String> {
+        let items = match arr {
+            Value::Array(a) => a,
+            _ => return Err("reduce() requires an array".to_string()),
+        };
+
+        let mut iterator = items.into_iter();
+        let mut accumulator = if let Some(init_expr) = initial {
+            self.eval_expr(init_expr)?
+        } else {
+            iterator.next().ok_or("reduce() on empty array with no initial value")?
+        };
+
+        let callback_val = self.eval_expr(callback)?;
+        for item in iterator {
+            accumulator = self.apply_function(callback_val.clone(), vec![accumulator, item])?;
+        }
+        Ok(accumulator)
+    }
+
+    /// Built-in reduce function (standalone)
+    pub(super) fn builtin_reduce(&mut self, args: Vec<Expr>) -> Result<Value, String> {
+        if args.len() < 2 || args.len() > 3 {
+             return Err("reduce() takes 2 or 3 arguments".to_string());
+        }
+        let arr = self.eval_expr(args[0].clone())?;
+        let initial = if args.len() == 3 { Some(args[2].clone()) } else { None };
+        self.logic_reduce(arr, args[1].clone(), initial)
+    }
+
+    /// Core logic for reverse
+    pub(super) fn logic_reverse(&mut self, arr: Value) -> Result<Value, String> {
+        let mut items = match arr {
+            Value::Array(a) => a,
+            _ => return Err("reverse() requires an array".to_string()),
+        };
+        items.reverse();
+        Ok(Value::Array(items))
+    }
+
+    /// Built-in reverse function (standalone)
+    pub(super) fn builtin_reverse(&mut self, args: Vec<Expr>) -> Result<Value, String> {
+        if args.len() != 1 { return Err("reverse() takes 1 argument".to_string()); }
+        let arr = self.eval_expr(args[0].clone())?;
+        self.logic_reverse(arr)
+    }
+
+    /// Core logic for sort
+    pub(super) fn logic_sort(&mut self, arr: Value) -> Result<Value, String> {
+        let mut items = match arr {
+            Value::Array(a) => a,
+            _ => return Err("sort() requires an array".to_string()),
+        };
+        items.sort_by(|a, b| {
+            match (a, b) {
+                (Value::Int(x), Value::Int(y)) => x.cmp(y),
+                (Value::Float(x), Value::Float(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
+                (Value::String(x), Value::String(y)) => x.cmp(y),
+                 _ => format!("{:?}", a).cmp(&format!("{:?}", b)),
+            }
+        });
+        Ok(Value::Array(items))
+    }
+
+    /// Built-in sort function (standalone)
+    pub(super) fn builtin_sort(&mut self, args: Vec<Expr>) -> Result<Value, String> {
+        if args.len() != 1 { return Err("sort() takes 1 argument".to_string()); }
+        let arr = self.eval_expr(args[0].clone())?;
+        self.logic_sort(arr)
+    }
 }
 

@@ -93,6 +93,27 @@ impl Interpreter {
                         Value::Map(map) => Ok(Value::Int(map.len() as i64)),
                         _ => Err("len() can only be called on arrays, strings, or maps".to_string()),
                     },
+                    "map" => {
+                        if args.len() != 1 { return Err("map() requires 1 argument: callback".to_string()); }
+                        self.logic_map(obj_value, args[0].clone())
+                    },
+                    "filter" => {
+                        if args.len() != 1 { return Err("filter() requires 1 argument: callback".to_string()); }
+                        self.logic_filter(obj_value, args[0].clone())
+                    },
+                    "reduce" => {
+                        if args.len() < 1 || args.len() > 2 { return Err("reduce() requires 1 or 2 arguments: callback, [initial]".to_string()); }
+                        let initial = if args.len() == 2 { Some(args[1].clone()) } else { None };
+                        self.logic_reduce(obj_value, args[0].clone(), initial)
+                    },
+                    "reverse" => {
+                        if !args.is_empty() { return Err("reverse() takes no arguments".to_string()); }
+                        self.logic_reverse(obj_value)
+                    },
+                    "sort" => {
+                        if !args.is_empty() { return Err("sort() takes no arguments".to_string()); }
+                        self.logic_sort(obj_value)
+                    },
                     // Math methods
                     "abs" => match obj_value {
                         Value::Int(n) => Ok(Value::Int(n.abs())),
@@ -216,39 +237,23 @@ impl Interpreter {
                 "floor" => return self.builtin_floor(args),
                 "ceil" => return self.builtin_ceil(args),
                 "round" => return self.builtin_round(args),
+                // Array functions
+                "map" => return self.builtin_map(args),
+                "filter" => return self.builtin_filter(args),
+                "reduce" => return self.builtin_reduce(args),
+                "reverse" => return self.builtin_reverse(args),
+                "sort" => return self.builtin_sort(args),
                 _ => {}
             }
         }
 
-        let func = self.eval_expr(callee)?;
-
-        match func {
-            Value::Function { params, body } => {
-                if params.len() != args.len() {
-                    return Err(format!(
-                        "Expected {} arguments, got {}",
-                        params.len(),
-                        args.len()
-                    ));
-                }
-
-                self.env.push_scope();
-
-                for (param, arg) in params.iter().zip(args.iter()) {
-                    let arg_val = self.eval_expr(arg.clone())?;
-                    self.env.set(param.clone(), arg_val);
-                }
-
-                let result = self.eval_expr(body)?;
-                // Verify return state is consumed here
-                if self.is_returning {
-                    self.is_returning = false;
-                }
-                self.env.pop_scope();
-
-                Ok(result)
-            }
-            _ => Err("Not a callable function".to_string()),
+        // Evaluate arguments first
+        let mut arg_values = Vec::new();
+        for arg in args {
+            arg_values.push(self.eval_expr(arg)?);
         }
+
+        let func = self.eval_expr(callee)?;
+        self.apply_function(func, arg_values)
     }
 }

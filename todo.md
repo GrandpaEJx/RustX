@@ -93,10 +93,10 @@
 - [x] Complete parser module refactoring (Split into mod/expr/stmt)
 - [x] Complete lexer module refactoring (Split into mod/token/readers)
 - [x] Add more built-in functions (len, push, pop, type) ✅
-- [ ] Add string manipulation functions (split, join, trim, upper, lower)
-- [ ] Add math functions (abs, min, max, floor, ceil, round)
-- [ ] Add array functions (map, filter, reduce, reverse, sort)
-- [ ] Run all examples and verify output
+- [x] Add string manipulation functions (split, join, trim, upper, lower)
+- [x] Add math functions (abs, min, max, floor, ceil, round)
+- [x] Add array functions (map, filter, reduce, reverse, sort)
+- [x] Run all examples and verify output
 - [ ] Compiler: Support recursive functions
 - [ ] Compiler: Support template strings
 - [ ] Update FAQ in README with common questions

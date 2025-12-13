@@ -47,6 +47,37 @@ impl Interpreter {
 
         Ok(last_value)
     }
+
+    /// Helper to apply a function (Value) to arguments (Values)
+    pub(super) fn apply_function(&mut self, func: Value, args: Vec<Value>) -> Result<Value, String> {
+        match func {
+            Value::Function { params, body } => {
+                if params.len() != args.len() {
+                    return Err(format!(
+                        "Expected {} arguments, got {}",
+                        params.len(),
+                        args.len()
+                    ));
+                }
+
+                self.env.push_scope();
+
+                for (param, arg) in params.iter().zip(args.into_iter()) {
+                    self.env.set(param.clone(), arg);
+                }
+
+                let result = self.eval_expr(body)?;
+                // Verify return state is consumed here
+                if self.is_returning {
+                    self.is_returning = false;
+                }
+                self.env.pop_scope();
+
+                Ok(result)
+            }
+            _ => Err("Not a callable function".to_string()),
+        }
+    }
 }
 
 impl Default for Interpreter {
