@@ -321,7 +321,9 @@ let flag: bool = rx! { "true" };                // Boolean
 
 ## 📚 Built-in Functions
 
-### `print(...)`
+### Core Functions
+
+#### `print(...)`
 
 Print values to console:
 
@@ -331,7 +333,7 @@ print("Sum:", 10 + 5)       // Sum: 15
 print(1, 2, 3)              // 1 2 3
 ```
 
-### `range(start?, end, step?)`
+#### `range(start?, end, step?)`
 
 Generate a sequence of numbers:
 
@@ -341,7 +343,7 @@ range(2, 7)         // [2, 3, 4, 5, 6]
 range(0, 10, 2)     // [0, 2, 4, 6, 8]
 ```
 
-### `len(value)`
+#### `len(value)`
 
 Get the length of an array, string, or map:
 
@@ -351,7 +353,7 @@ len("Hello")            // 5
 len({a: 1, b: 2})       // 2
 ```
 
-### `type(value)`
+#### `type(value)`
 
 Get the type name of a value as a string:
 
@@ -363,7 +365,9 @@ type(true)              // "bool"
 type([1, 2, 3])         // "array"
 ```
 
-### `push(array, value)`
+### Array Functions
+
+#### `push(array, value)`
 
 Add an element to the end of an array (mutates the array):
 
@@ -373,7 +377,7 @@ push(items, 4)
 print(items)            // [1, 2, 3, 4]
 ```
 
-### `pop(array)`
+#### `pop(array)`
 
 Remove and return the last element from an array:
 
@@ -384,6 +388,110 @@ print(last)             // 4
 print(items)            // [1, 2, 3]
 ```
 
+### String Functions
+
+#### `split(string, delimiter)`
+
+Split a string into an array:
+
+```rustx
+text = "apple,banana,cherry"
+fruits = split(text, ",")
+print(fruits)           // [apple, banana, cherry]
+```
+
+#### `join(array, delimiter)`
+
+Join an array into a string:
+
+```rustx
+numbers = [1, 2, 3, 4, 5]
+result = join(numbers, " - ")
+print(result)           // 1 - 2 - 3 - 4 - 5
+```
+
+#### `trim(string)`
+
+Remove whitespace from both ends:
+
+```rustx
+messy = "  hello world  "
+clean = trim(messy)
+print(clean)            // hello world
+```
+
+#### `upper(string)`
+
+Convert to uppercase:
+
+```rustx
+print(upper("hello"))   // HELLO
+```
+
+#### `lower(string)`
+
+Convert to lowercase:
+
+```rustx
+print(lower("WORLD"))   // world
+```
+
+### Math Functions
+
+#### `abs(number)`
+
+Get absolute value:
+
+```rustx
+print(abs(-42))         // 42
+print(abs(3.14))        // 3.14
+```
+
+#### `min(a, b)`
+
+Get minimum of two numbers:
+
+```rustx
+print(min(10, 20))      // 10
+print(min(3.14, 2.71))  // 2.71
+```
+
+#### `max(a, b)`
+
+Get maximum of two numbers:
+
+```rustx
+print(max(10, 20))      // 20
+print(max(3.14, 2.71))  // 3.14
+```
+
+#### `floor(number)`
+
+Round down to nearest integer:
+
+```rustx
+print(floor(3.14))      // 3
+print(floor(7.9))       // 7
+```
+
+#### `ceil(number)`
+
+Round up to nearest integer:
+
+```rustx
+print(ceil(3.14))       // 4
+print(ceil(7.1))        // 8
+```
+
+#### `round(number)`
+
+Round to nearest integer:
+
+```rustx
+print(round(3.14))      // 3
+print(round(7.5))       // 8
+```
+
 ---
 
 ## 🎓 Learning Path
@@ -391,8 +499,9 @@ print(items)            // [1, 2, 3]
 1. **Start Simple**: Try the examples in `examples/basic.rsx`
 2. **Learn Loops**: Check out `examples/loops.rsx`
 3. **Try Recursion**: Explore `examples/recursion.rsx`
-4. **Use the REPL**: Experiment interactively
-5. **Read the Code**: Browse `crates/core/src/` to understand internals
+4. **Built-in Functions**: See `examples/builtins.rsx` and `examples/string_math.rsx`
+5. **Use the REPL**: Experiment interactively
+6. **Read the Code**: Browse `crates/core/src/` to understand internals
 
 ---
 
