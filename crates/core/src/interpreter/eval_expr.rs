@@ -101,6 +101,19 @@ impl Interpreter {
                 "type" => return self.builtin_type(args),
                 "push" => return self.builtin_push(args),
                 "pop" => return self.builtin_pop(args),
+                // String functions
+                "split" => return self.builtin_split(args),
+                "join" => return self.builtin_join(args),
+                "trim" => return self.builtin_trim(args),
+                "upper" => return self.builtin_upper(args),
+                "lower" => return self.builtin_lower(args),
+                // Math functions
+                "abs" => return self.builtin_abs(args),
+                "min" => return self.builtin_min(args),
+                "max" => return self.builtin_max(args),
+                "floor" => return self.builtin_floor(args),
+                "ceil" => return self.builtin_ceil(args),
+                "round" => return self.builtin_round(args),
                 _ => {}
             }
         }
