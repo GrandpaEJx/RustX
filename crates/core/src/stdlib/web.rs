@@ -68,8 +68,8 @@ pub fn app(args: Vec<Value>) -> Result<Value, String> {
     // app.listen(port, options?)
     let config_clone = Arc::clone(&config);
     map.insert("listen".to_string(), Value::NativeFunction(Arc::new(move |args| {
-        if args.len() < 1 || args.len() > 3 { 
-            return Err("app.listen expects 1, 2, or 3 arguments: port, [options] OR [debug, workers]".to_string()); 
+        if args.len() < 1 || args.len() > 4 { 
+            return Err("app.listen expects 1 to 4 arguments: port, [debug], [workers], [host]".to_string()); 
         }
         
         let port = args[0].as_int()? as u16;
@@ -89,12 +89,17 @@ pub fn app(args: Vec<Value>) -> Result<Value, String> {
                 Value::Bool(d) => { debug = *d; },
                 _ => return Err("app.listen: Second argument must be an options map or debug boolean".to_string()),
             }
-        } else if args.len() == 3 {
+        } else if args.len() >= 3 {
              if let Value::Bool(d) = &args[1] { debug = *d; }
              else { return Err("app.listen: Second argument (debug) must be boolean".to_string()); }
              
              if let Value::Int(w) = &args[2] { workers = *w as usize; }
              else { return Err("app.listen: Third argument (workers) must be integer".to_string()); }
+             
+             if args.len() == 4 {
+                 if let Value::String(h) = &args[3] { host = h.clone(); }
+                 else { return Err("app.listen: Fourth argument (host) must be string".to_string()); }
+             }
         }
         
         if debug {
