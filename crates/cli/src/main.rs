@@ -1,11 +1,13 @@
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 use rustx_core::{Interpreter, Lexer, Parser as RxParser, Value};
+use rustx_core::compiler::transpiler::Transpiler;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 use std::fs;
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::process::Command as SysCommand;
 
 #[derive(Parser)]
 #[command(name = "rustx")]
@@ -52,6 +54,13 @@ enum Commands {
         #[arg(long)]
         time: bool,
     },
+    /// Compile a script to an executable
+    Build {
+        file: PathBuf,
+        /// Output file path
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+    },
 }
 
 fn main() {
@@ -65,6 +74,7 @@ fn main() {
             tokens,
             time,
         }) => run_file(&file, ast, tokens, time, false),
+        Some(Commands::Build { file, output }) => build_file(&file, output),
         None => {
             if let Some(file) = cli.file {
                 run_file(&file, cli.ast, cli.tokens, cli.time, cli.verbose);
@@ -215,6 +225,121 @@ fn run_file(path: &PathBuf, show_ast: bool, show_tokens: bool, show_time: bool, 
             std::process::exit(1);
         }
     }
+}
+
+/// Compiles a script file
+fn build_file(path: &PathBuf, output: Option<PathBuf>) {
+    let start_time = Instant::now();
+    println!("{} {}", "Compiling:".bright_blue().bold(), path.display());
+
+    let source = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("{} {}", "Error reading file:".red().bold(), e);
+            std::process::exit(1);
+        }
+    };
+
+    // 1. Transpile to Rust
+    let mut lexer = Lexer::new(&source);
+    let tokens = match lexer.tokenize() {
+        Ok(t) => t,
+        Err(e) => {
+             eprintln!("{} {}", "Lexer Error:".red().bold(), e);
+             std::process::exit(1);
+        }
+    };
+    
+    let mut parser = RxParser::new(tokens);
+    let ast = match parser.parse() {
+        Ok(a) => a,
+        Err(e) => {
+             eprintln!("{} {}", "Parser Error:".red().bold(), e);
+             std::process::exit(1);
+        }
+    };
+    
+    let mut transpiler = Transpiler::new();
+    let rust_code = transpiler.transpile(&ast);
+    
+    // 2. Setup Build Environment
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let build_dir = std::env::temp_dir().join(format!("rustx_build_{}", timestamp));
+    
+    if let Err(e) = fs::create_dir_all(&build_dir) {
+         eprintln!("{} {}", "Error creating temp dir:".red().bold(), e);
+         std::process::exit(1);
+    }
+    
+    println!("{} {}", "Build setup:".dimmed(), build_dir.display());
+    
+    // Initialize cargo project
+    let status = SysCommand::new("cargo")
+        .arg("init")
+        .arg("--bin")
+        .arg("--name")
+        .arg("app")
+        .current_dir(&build_dir)
+        .output();
+        
+    if let Err(e) = status {
+         eprintln!("{} {}", "Error initializing cargo:".red().bold(), e);
+         std::process::exit(1);
+    }
+    
+    // Add dependency
+    // Hardcoded absolute path to core
+    let core_path = "/home/grandpa/me/code/rust/RustX/crates/core";
+    let cargo_toml_path = build_dir.join("Cargo.toml");
+    let mut cargo_toml = fs::read_to_string(&cargo_toml_path).unwrap();
+    cargo_toml.push_str(&format!("\nrustx_core = {{ path = \"{}\" }}\n", core_path));
+    fs::write(&cargo_toml_path, cargo_toml).unwrap();
+    
+    // Write source
+    let main_rs_path = build_dir.join("src/main.rs");
+    if let Err(e) = fs::write(&main_rs_path, rust_code) {
+         eprintln!("{} {}", "Error writing source:".red().bold(), e);
+         std::process::exit(1);
+    }
+    
+    // 3. Compile
+    println!("{}", "Compiling binary...".bright_yellow());
+    let compile_status = SysCommand::new("cargo")
+        .arg("build")
+        .arg("--release")
+        .current_dir(&build_dir)
+        .output();
+        
+    match compile_status {
+        Ok(res) => {
+            if !res.status.success() {
+                eprintln!("{}", "Compilation failed:".red().bold());
+                eprintln!("{}", String::from_utf8_lossy(&res.stderr));
+                std::process::exit(1);
+            }
+        }
+        Err(e) => {
+             eprintln!("{} {}", "Failed to run cargo build:".red().bold(), e);
+             std::process::exit(1);
+        }
+    }
+    
+    // 4. Move Output
+    let binary = build_dir.join("target/release/app");
+    let output_path = output.unwrap_or_else(|| {
+        let file_stem = path.file_stem().unwrap().to_str().unwrap();
+        PathBuf::from(file_stem)
+    });
+    
+    if let Err(e) = fs::copy(&binary, &output_path) {
+         eprintln!("{} {}", "Error moving binary:".red().bold(), e);
+         std::process::exit(1);
+    }
+    
+    println!("{} {} ({:.2}s)", "Successfully built:".bright_green().bold(), output_path.display(), start_time.elapsed().as_secs_f32());
+    
+    // Cleanup (optional, maybe keep for debugging?)
+    // fs::remove_dir_all(&build_dir).ok();
 }
 
 /// Executes source code
