@@ -341,6 +341,49 @@ range(2, 7)         // [2, 3, 4, 5, 6]
 range(0, 10, 2)     // [0, 2, 4, 6, 8]
 ```
 
+### `len(value)`
+
+Get the length of an array, string, or map:
+
+```rustx
+len([1, 2, 3])          // 3
+len("Hello")            // 5
+len({a: 1, b: 2})       // 2
+```
+
+### `type(value)`
+
+Get the type name of a value as a string:
+
+```rustx
+type(42)                // "int"
+type(3.14)              // "float"
+type("hello")           // "string"
+type(true)              // "bool"
+type([1, 2, 3])         // "array"
+```
+
+### `push(array, value)`
+
+Add an element to the end of an array (mutates the array):
+
+```rustx
+items = [1, 2, 3]
+push(items, 4)
+print(items)            // [1, 2, 3, 4]
+```
+
+### `pop(array)`
+
+Remove and return the last element from an array:
+
+```rustx
+items = [1, 2, 3, 4]
+last = pop(items)
+print(last)             // 4
+print(items)            // [1, 2, 3]
+```
+
 ---
 
 ## 🎓 Learning Path
