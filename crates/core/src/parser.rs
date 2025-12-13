@@ -404,6 +404,12 @@ impl Parser {
                 self.advance();
                 Ok(Expr::String(s))
             }
+            Token::TemplateString(s) => {
+                self.advance();
+                // Parser just passes the template string as-is
+                // Interpolation happens at runtime in the interpreter
+                Ok(Expr::TemplateString(s))
+            }
             Token::Bool(b) => {
                 self.advance();
                 Ok(Expr::Bool(b))

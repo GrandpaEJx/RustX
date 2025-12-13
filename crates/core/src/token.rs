@@ -5,6 +5,7 @@ pub enum Token {
     Int(i64),
     Float(f64),
     String(String),
+    TemplateString(String), // Backtick strings with {var} interpolation
     Bool(bool),
     
     // Identifiers and Keywords

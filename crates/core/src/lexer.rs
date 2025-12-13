@@ -148,6 +148,35 @@ impl<'a> Lexer<'a> {
         Err("Unterminated string".to_string())
     }
 
+    /// Reads a template string literal (backtick strings)
+    fn read_template_string(&mut self) -> Result<Token, String> {
+        self.advance(); // skip opening backtick
+        let mut string = String::new();
+
+        while let Some(ch) = self.current_char {
+            if ch == '`' {
+                self.advance();
+                return Ok(Token::TemplateString(string));
+            } else if ch == '\\' {
+                self.advance();
+                match self.current_char {
+                    Some('n') => string.push('\n'),
+                    Some('t') => string.push('\t'),
+                    Some('r') => string.push('\r'),
+                    Some('\\') => string.push('\\'),
+                    Some('`') => string.push('`'),
+                    _ => return Err("Invalid escape sequence".to_string()),
+                }
+                self.advance();
+            } else {
+                string.push(ch);
+                self.advance();
+            }
+        }
+
+        Err("Unterminated template string".to_string())
+    }
+
     /// Gets the next token
     pub fn next_token(&mut self) -> Result<Token, String> {
         self.skip_whitespace();
@@ -185,6 +214,11 @@ impl<'a> Lexer<'a> {
                 // String literals
                 if ch == '"' {
                     return self.read_string();
+                }
+
+                // Template string literals
+                if ch == '`' {
+                    return self.read_template_string();
                 }
 
                 // Operators and delimiters

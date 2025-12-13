@@ -7,6 +7,7 @@ pub enum Expr {
     Int(i64),
     Float(f64),
     String(String),
+    TemplateString(String), // Backtick string with {var} interpolation
     Bool(bool),
     Null,
     

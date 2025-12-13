@@ -12,6 +12,37 @@ impl Interpreter {
             Expr::Int(n) => Ok(Value::Int(n)),
             Expr::Float(f) => Ok(Value::Float(f)),
             Expr::String(s) => Ok(Value::String(s)),
+            Expr::TemplateString(template) => {
+                // Interpolate variables in template string
+                let mut result = String::new();
+                let mut chars = template.chars().peekable();
+                
+                while let Some(ch) = chars.next() {
+                    if ch == '{' {
+                        // Extract variable name
+                        let mut var_name = String::new();
+                        while let Some(&next_ch) = chars.peek() {
+                            if next_ch == '}' {
+                                chars.next(); // consume '}'
+                                break;
+                            }
+                            var_name.push(chars.next().unwrap());
+                        }
+                        
+                        // Get variable value and append to result
+                        if !var_name.is_empty() {
+                            match self.env.get(&var_name) {
+                                Ok(value) => result.push_str(&format!("{}", value)),
+                                Err(_) => result.push_str(&format!("{{{}}}", var_name)), // Keep as-is if not found
+                            }
+                        }
+                    } else {
+                        result.push(ch);
+                    }
+                }
+                
+                Ok(Value::String(result))
+            }
             Expr::Bool(b) => Ok(Value::Bool(b)),
             Expr::Null => Ok(Value::Null),
             Expr::Ident(name) => self.env.get(&name),
