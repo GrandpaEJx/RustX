@@ -15,7 +15,7 @@ print("join([1,2,3,4,5], ' - ') =", joined)
 // trim() - remove whitespace
 messy = "  hello world  "
 clean = trim(messy)
-print("trim('  hello world  ') = '", clean, "'", sep="")
+print("trim('  hello world  ') =", clean)
 
 // upper() and lower()
 message = "Hello World"
