@@ -374,7 +374,7 @@ fn execute(
     }
 
     // Interpret
-    interpreter.eval_program(ast)
+    interpreter.eval_program(ast).map_err(|e| e.to_string())
 }
 
 /// Prints help information

@@ -1,13 +1,13 @@
-/// Expression evaluation logic for the interpreter
+//! Expression evaluation logic for the interpreter
 
 use crate::ast::Expr;
 use crate::value::Value;
 use std::collections::HashMap;
-use super::Interpreter;
+use super::{Interpreter, InterpreterResult, RuntimeError};
 
 impl Interpreter {
     /// Evaluates an expression
-    pub(super) fn eval_expr(&mut self, expr: Expr) -> Result<Value, String> {
+    pub(super) fn eval_expr(&mut self, expr: Expr) -> InterpreterResult<Value> {
         match expr {
             Expr::Int(n) => Ok(Value::Int(n)),
             Expr::Float(f) => Ok(Value::Float(f)),
@@ -45,119 +45,86 @@ impl Interpreter {
             }
             Expr::Bool(b) => Ok(Value::Bool(b)),
             Expr::Null => Ok(Value::Null),
-            Expr::Ident(name) => self.env.get(&name),
+            Expr::Ident(name) => self.env.get(&name).map_err(|_| RuntimeError::UndefinedVariable(name)),
             Expr::Binary { left, op, right } => self.eval_binary(*left, op, *right),
             Expr::Unary { op, expr } => self.eval_unary(op, *expr),
             Expr::Call { callee, args } => self.eval_call(*callee, args),
             Expr::MethodCall { object, method, args } => {
                 // Evaluate the object
-                let obj_value = self.eval_expr(*object)?;
+                let mut obj_value = self.eval_expr(*object)?;
                 
                 // Call the appropriate method based on the method name
                 match method.as_str() {
                     // String methods
-                    "upper" => match obj_value {
-                        Value::String(s) => Ok(Value::String(s.to_uppercase())),
-                        _ => Err("upper() can only be called on strings".to_string()),
-                    },
-                    "lower" => match obj_value {
-                        Value::String(s) => Ok(Value::String(s.to_lowercase())),
-                        _ => Err("lower() can only be called on strings".to_string()),
-                    },
-                    "trim" => match obj_value {
-                        Value::String(s) => Ok(Value::String(s.trim().to_string())),
-                        _ => Err("trim() can only be called on strings".to_string()),
-                    },
+                    "upper" => {
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("upper() takes no arguments".to_string())); }
+                        obj_value.upper().map_err(RuntimeError::from)
+                    }
+                    "lower" => {
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("lower() takes no arguments".to_string())); }
+                        obj_value.lower().map_err(RuntimeError::from)
+                    }
+                    "trim" => {
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("trim() takes no arguments".to_string())); }
+                        obj_value.trim().map_err(RuntimeError::from)
+                    }
                     "split" => {
                         if args.len() != 1 {
-                            return Err("split() requires exactly 1 argument".to_string());
+                            return Err(RuntimeError::ArgumentError("split() requires exactly 1 argument".to_string()));
                         }
-                        match obj_value {
-                            Value::String(s) => {
-                                let delimiter = match self.eval_expr(args[0].clone())? {
-                                    Value::String(d) => d,
-                                    _ => return Err("split() delimiter must be a string".to_string()),
-                                };
-                                let parts: Vec<Value> = s.split(&delimiter)
-                                    .map(|p| Value::String(p.to_string()))
-                                    .collect();
-                                Ok(Value::Array(parts))
-                            }
-                            _ => Err("split() can only be called on strings".to_string()),
-                        }
+                        let delim = self.eval_expr(args[0].clone())?;
+                        obj_value.split(&delim).map_err(RuntimeError::from)
                     },
                     // Array methods
-                    "len" => match obj_value {
-                        Value::Array(arr) => Ok(Value::Int(arr.len() as i64)),
-                        Value::String(s) => Ok(Value::Int(s.len() as i64)),
-                        Value::Map(map) => Ok(Value::Int(map.len() as i64)),
-                        _ => Err("len() can only be called on arrays, strings, or maps".to_string()),
+                    "len" => {
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("len() takes no arguments".to_string())); }
+                        Ok(Value::Int(obj_value.len().map_err(RuntimeError::from)?))
                     },
                     "map" => {
-                        if args.len() != 1 { return Err("map() requires 1 argument: callback".to_string()); }
+                        if args.len() != 1 { return Err(RuntimeError::ArgumentError("map() requires 1 argument: callback".to_string())); }
                         self.logic_map(obj_value, args[0].clone())
                     },
                     "filter" => {
-                        if args.len() != 1 { return Err("filter() requires 1 argument: callback".to_string()); }
+                        if args.len() != 1 { return Err(RuntimeError::ArgumentError("filter() requires 1 argument: callback".to_string())); }
                         self.logic_filter(obj_value, args[0].clone())
                     },
                     "reduce" => {
-                        if args.len() < 1 || args.len() > 2 { return Err("reduce() requires 1 or 2 arguments: callback, [initial]".to_string()); }
+                        if args.is_empty() || args.len() > 2 { return Err(RuntimeError::ArgumentError("reduce() requires 1 or 2 arguments: callback, [initial]".to_string())); }
                         let initial = if args.len() == 2 { Some(args[1].clone()) } else { None };
                         self.logic_reduce(obj_value, args[0].clone(), initial)
                     },
                     "reverse" => {
-                        if !args.is_empty() { return Err("reverse() takes no arguments".to_string()); }
-                        self.logic_reverse(obj_value)
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("reverse() takes no arguments".to_string())); }
+                        obj_value.reverse_in_place().map_err(RuntimeError::from)
                     },
                     "sort" => {
-                        if !args.is_empty() { return Err("sort() takes no arguments".to_string()); }
-                        self.logic_sort(obj_value)
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("sort() takes no arguments".to_string())); }
+                        obj_value.sort_in_place().map_err(RuntimeError::from)
                     },
                     // Math methods
-                    "abs" => match obj_value {
-                        Value::Int(n) => Ok(Value::Int(n.abs())),
-                        Value::Float(f) => Ok(Value::Float(f.abs())),
-                        _ => Err("abs() can only be called on numbers".to_string()),
+                    "abs" => {
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("abs() takes no arguments".to_string())); }
+                        obj_value.abs().map_err(RuntimeError::from)
                     },
-                    "floor" => match obj_value {
-                        Value::Float(f) => Ok(Value::Int(f.floor() as i64)),
-                        Value::Int(n) => Ok(Value::Int(n)),
-                        _ => Err("floor() can only be called on numbers".to_string()),
+                    "floor" => {
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("floor() takes no arguments".to_string())); }
+                        obj_value.floor().map_err(RuntimeError::from)
                     },
-                    "ceil" => match obj_value {
-                        Value::Float(f) => Ok(Value::Int(f.ceil() as i64)),
-                        Value::Int(n) => Ok(Value::Int(n)),
-                        _ => Err("ceil() can only be called on numbers".to_string()),
+                    "ceil" => {
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("ceil() takes no arguments".to_string())); }
+                        obj_value.ceil().map_err(RuntimeError::from)
                     },
-                    "round" => match obj_value {
-                        Value::Float(f) => Ok(Value::Int(f.round() as i64)),
-                        Value::Int(n) => Ok(Value::Int(n)),
-                        _ => Err("round() can only be called on numbers".to_string()),
+                    "round" => {
+                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("round() takes no arguments".to_string())); }
+                        obj_value.round().map_err(RuntimeError::from)
                     },
                     _ => {
                         // Fallback: Check if object is a map and method is a key
                         if let Value::Map(ref map) = obj_value {
                             if let Some(val) = map.get(&method) {
-                                // If arguments are provided for a non-method map entry, it might be a function call on that entry?
-                                // Standard Dot Access "lib.func(args)" vs "lib.func"
-                                // If "lib.func" is called as method, args are provided.
-                                // If "lib.PI" is access, args are likely empty (checked by parser? No, MethodCall ALWAYS has args Vec)
-                                // Parser wraps property access like `lib.PI` as MethodCall with empty args ??
-                                // Wait, parser likely produces `MethodCall` if `.` follows.
-                                // If `lib.PI` is just access, args is empty.
                                 if args.is_empty() {
                                     return Ok(val.clone());
                                 } else {
-                                    // It's a method call simulation: `lib.func(arg)`
-                                    // `val` is the function.
-                                    // Use `apply_function`? Or `eval_call` logic?
-                                    // `apply_function` takes Values. `args` here are `Expr`.
-                                    // So we need to evaluate args.
-                                    // This reuses the logic from `eval_call` basically.
-                                    // Wait, `eval_expr` logic for `Expr::Call` handles `Expr` args.
-                                    // Here we are inside `Expr::MethodCall`.
-                                    
                                      // Evaluate arguments first
                                     let mut arg_values = Vec::new();
                                     for arg in args {
@@ -167,7 +134,7 @@ impl Interpreter {
                                 }
                             }
                         }
-                        Err(format!("Unknown method or property: {}", method))
+                        Err(RuntimeError::UnknownMethod(method))
                     }
                 }
             }
@@ -222,7 +189,7 @@ impl Interpreter {
     }
 
     /// Evaluates index access
-    pub(super) fn eval_index(&mut self, object: Expr, index: Expr) -> Result<Value, String> {
+    pub(super) fn eval_index(&mut self, object: Expr, index: Expr) -> InterpreterResult<Value> {
         let obj_val = self.eval_expr(object)?;
         let idx_val = self.eval_expr(index)?;
 
@@ -236,18 +203,18 @@ impl Interpreter {
 
                 arr.get(index)
                     .cloned()
-                    .ok_or_else(|| "Array index out of bounds".to_string())
+                    .ok_or_else(|| RuntimeError::from("Array index out of bounds"))
             }
             (Value::Map(map), Value::String(key)) => map
                 .get(&key)
                 .cloned()
-                .ok_or_else(|| format!("Key '{}' not found in map", key)),
-            _ => Err("Invalid index operation".to_string()),
+                .ok_or_else(|| RuntimeError::from(format!("Key '{}' not found in map", key))),
+            _ => Err(RuntimeError::TypeMismatch { expected: "Array or Map".to_string(), found: "other".to_string() }),
         }
     }
 
     /// Evaluates a function call
-    pub(super) fn eval_call(&mut self, callee: Expr, args: Vec<Expr>) -> Result<Value, String> {
+    pub(super) fn eval_call(&mut self, callee: Expr, args: Vec<Expr>) -> InterpreterResult<Value> {
         // Check for built-in functions first
         if let Expr::Ident(name) = &callee {
             match name.as_str() {

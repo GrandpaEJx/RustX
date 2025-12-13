@@ -1,4 +1,4 @@
-/// Abstract Syntax Tree node types for RustX
+//! Abstract Syntax Tree node types for RustX
 
 mod expr;
 mod stmt;

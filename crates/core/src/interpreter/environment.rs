@@ -1,4 +1,4 @@
-/// Environment for variable storage in the interpreter
+//! Environment for variable storage in the interpreter
 
 use crate::value::Value;
 use std::collections::HashMap;
@@ -40,8 +40,8 @@ impl Environment {
     pub fn update(&mut self, name: String, value: Value) {
         // Search for the variable in all scopes from innermost to outermost
         for scope in self.scopes.iter_mut().rev() {
-            if scope.contains_key(&name) {
-                scope.insert(name, value);
+            if let Some(existing) = scope.get_mut(&name) {
+                *existing = value;
                 return;
             }
         }

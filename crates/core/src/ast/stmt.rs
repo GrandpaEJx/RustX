@@ -1,4 +1,4 @@
-/// Statement nodes for RustX AST
+//! Statement nodes for RustX AST
 
 /// Statement enum representing all statement types
 #[derive(Debug, Clone, PartialEq)]

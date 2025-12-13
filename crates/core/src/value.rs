@@ -65,6 +65,28 @@ impl Value {
         }
     }
 
+    /// Creates a range array
+    pub fn range(start: i64, end: i64, step: i64) -> Result<Value, String> {
+        if step == 0 {
+             return Err("step cannot be zero".to_string());
+        }
+        let mut arr = Vec::new();
+        if step > 0 {
+            let mut i = start;
+            while i < end {
+                arr.push(Value::Int(i));
+                i += step;
+            }
+        } else {
+            let mut i = start;
+            while i > end {
+                arr.push(Value::Int(i));
+                i += step;
+            }
+        }
+        Ok(Value::Array(arr))
+    }
+
     /// Attempts to convert value to i64
     pub fn as_int(&self) -> Result<i64, String> {
         match self {
@@ -91,6 +113,159 @@ impl Value {
         }
     }
 
+    /// Access as mutable array
+    pub fn as_array_mut(&mut self) -> Option<&mut Vec<Value>> {
+        match self {
+            Value::Array(arr) => Some(arr),
+            _ => None,
+        }
+    }
+    
+    // === Type Info ===
+    
+    pub fn type_name(&self) -> String {
+        match self {
+            Value::Int(_) => "int",
+            Value::Float(_) => "float",
+            Value::String(_) => "string",
+            Value::Bool(_) => "bool",
+            Value::Array(_) => "array",
+            Value::Map(_) => "map",
+            Value::Function { .. } => "function",
+            Value::Null => "null",
+        }.to_string()
+    }
+    
+    pub fn len(&self) -> Result<i64, String> {
+        match self {
+            Value::Array(arr) => Ok(arr.len() as i64),
+            Value::String(s) => Ok(s.len() as i64),
+            Value::Map(map) => Ok(map.len() as i64),
+            _ => Err(format!("Type {} does not support len()", self.type_name())),
+        }
+    }
+
+    pub fn is_empty(&self) -> Result<bool, String> {
+        self.len().map(|l| l == 0)
+    }
+    
+    // === Array Methods ===
+    
+    pub fn push(&mut self, value: Value) -> Result<Value, String> {
+        match self {
+            Value::Array(arr) => {
+                arr.push(value);
+                Ok(Value::Array(arr.clone()))
+            },
+            _ => Err(format!("Type {} does not support push()", self.type_name())),
+        }
+    }
+
+    pub fn pop(&mut self) -> Result<Value, String> {
+        match self {
+            Value::Array(arr) => {
+                arr.pop().ok_or_else(|| "Cannot pop from empty array".to_string())
+            },
+            _ => Err(format!("Type {} does not support pop()", self.type_name())),
+        }
+    }
+    
+    pub fn reverse_in_place(&mut self) -> Result<Value, String> {
+         match self {
+            Value::Array(arr) => {
+                arr.reverse();
+                Ok(Value::Array(arr.clone()))
+            },
+            _ => Err(format!("Type {} does not support reverse()", self.type_name())),
+        }
+    }
+    
+    pub fn sort_in_place(&mut self) -> Result<Value, String> {
+         match self {
+            Value::Array(arr) => {
+                arr.sort_by(|a, b| {
+                    match (a, b) {
+                        (Value::Int(x), Value::Int(y)) => x.cmp(y),
+                        (Value::Float(x), Value::Float(y)) => x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal),
+                        (Value::String(x), Value::String(y)) => x.cmp(y),
+                         _ => format!("{:?}", a).cmp(&format!("{:?}", b)),
+                    }
+                });
+                Ok(Value::Array(arr.clone()))
+            },
+            _ => Err(format!("Type {} does not support sort()", self.type_name())),
+        }
+    }
+    
+    // === String Methods ===
+    
+    pub fn split(&self, delimiter: &Value) -> Result<Value, String> {
+         match (self, delimiter) {
+            (Value::String(s), Value::String(d)) => {
+                let parts: Vec<Value> = s.split(d)
+                    .map(|p| Value::String(p.to_string()))
+                    .collect();
+                Ok(Value::Array(parts))
+            },
+            (Value::String(_), _) => Err("split requires string delimiter".to_string()),
+            _ => Err(format!("Type {} does not support split()", self.type_name())),
+        }
+    }
+    
+    pub fn trim(&self) -> Result<Value, String> {
+        match self {
+            Value::String(s) => Ok(Value::String(s.trim().to_string())),
+             _ => Err(format!("Type {} does not support trim()", self.type_name())),
+        }
+    }
+    
+    pub fn upper(&self) -> Result<Value, String> {
+        match self {
+            Value::String(s) => Ok(Value::String(s.to_uppercase())),
+             _ => Err(format!("Type {} does not support upper()", self.type_name())),
+        }
+    }
+    
+    pub fn lower(&self) -> Result<Value, String> {
+        match self {
+            Value::String(s) => Ok(Value::String(s.to_lowercase())),
+             _ => Err(format!("Type {} does not support lower()", self.type_name())),
+        }
+    }
+
+    // === Math Methods ===
+    
+    pub fn abs(&self) -> Result<Value, String> {
+        match self {
+            Value::Int(n) => Ok(Value::Int(n.abs())),
+            Value::Float(f) => Ok(Value::Float(f.abs())),
+            _ => Err(format!("Type {} does not support abs()", self.type_name())),
+        }
+    }
+    
+    pub fn floor(&self) -> Result<Value, String> {
+        match self {
+             Value::Float(f) => Ok(Value::Int(f.floor() as i64)),
+             Value::Int(n) => Ok(Value::Int(*n)),
+             _ => Err(format!("Type {} does not support floor()", self.type_name())),
+        }
+    }
+    
+    pub fn ceil(&self) -> Result<Value, String> {
+        match self {
+             Value::Float(f) => Ok(Value::Int(f.ceil() as i64)),
+             Value::Int(n) => Ok(Value::Int(*n)),
+             _ => Err(format!("Type {} does not support ceil()", self.type_name())),
+        }
+    }
+    
+    pub fn round(&self) -> Result<Value, String> {
+        match self {
+             Value::Float(f) => Ok(Value::Int(f.round() as i64)),
+             Value::Int(n) => Ok(Value::Int(*n)),
+             _ => Err(format!("Type {} does not support round()", self.type_name())),
+        }
+    }
 
     // Arithmetic Operations
     pub fn add(&self, other: &Value) -> Result<Value, String> {

@@ -1,4 +1,4 @@
-use rustx_macros::{rx, rx_with};
+use rustx_macros::rx_with;
 
 #[test]
 fn test_rx_with_basic() {

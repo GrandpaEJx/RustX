@@ -1,12 +1,12 @@
-/// Statement evaluation logic for the interpreter
+//! Statement evaluation logic for the interpreter
 
 use crate::ast::{Expr, Stmt};
 use crate::value::Value;
-use super::Interpreter;
+use super::{Interpreter, InterpreterResult, RuntimeError};
 
 impl Interpreter {
     /// Evaluates a statement
-    pub(super) fn eval_stmt(&mut self, stmt: Stmt) -> Result<Value, String> {
+    pub(super) fn eval_stmt(&mut self, stmt: Stmt) -> InterpreterResult<Value> {
         match stmt {
             Stmt::Expr(expr) => self.eval_expr(expr),
             Stmt::Let { name, value } => {
@@ -90,7 +90,7 @@ impl Interpreter {
                             }
                         }
                     }
-                    _ => return Err("For loop requires an array".to_string()),
+                    _ => return Err(RuntimeError::TypeMismatch { expected: "Array".to_string(), found: format!("{}", iter_value) }),
                 }
 
                 Ok(last_value)
@@ -100,7 +100,7 @@ impl Interpreter {
                 if let Some(name) = alias {
                     self.env.set(name, module);
                 } else {
-                    return Err("Import statement currently requires an alias (e.g., import \"file.rsx\" as name)".to_string());
+                    return Err(RuntimeError::ImportError("Import statement currently requires an alias (e.g., import \"file.rsx\" as name)".to_string()));
                 }
                 Ok(Value::Null)
             }

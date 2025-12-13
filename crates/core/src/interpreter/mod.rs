@@ -1,25 +1,33 @@
-/// Interpreter for RustX language
+//! Interpreter for RustX language
 
 mod environment;
 mod eval_expr;
 mod eval_stmt;
 mod eval_ops;
 mod builtins;
+pub mod error;
 
 pub use environment::Environment;
+pub use error::RuntimeError;
 
 use crate::ast::Stmt;
 use crate::value::Value;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
+use std::cell::RefCell;
 use std::fs;
-use std::collections::HashMap;
 
 /// Interpreter for RustX
 pub struct Interpreter {
     pub env: Environment,
     pub is_returning: bool,
+    pub module_cache: Rc<RefCell<HashMap<String, Value>>>,
+    pub loading_modules: Rc<RefCell<HashSet<String>>>,
 }
+
+pub type InterpreterResult<T> = Result<T, RuntimeError>;
 
 impl Interpreter {
     /// Creates a new interpreter
@@ -27,6 +35,8 @@ impl Interpreter {
         let mut interpreter = Interpreter {
             env: Environment::new(),
             is_returning: false,
+            module_cache: Rc::new(RefCell::new(HashMap::new())),
+            loading_modules: Rc::new(RefCell::new(HashSet::new())),
         };
         interpreter.init_builtins();
         interpreter
@@ -39,7 +49,7 @@ impl Interpreter {
     }
 
     /// Evaluates a program (list of statements)
-    pub fn eval_program(&mut self, statements: Vec<Stmt>) -> Result<Value, String> {
+    pub fn eval_program(&mut self, statements: Vec<Stmt>) -> InterpreterResult<Value> {
         let mut last_value = Value::Null;
 
         for stmt in statements {
@@ -53,15 +63,15 @@ impl Interpreter {
     }
 
     /// Helper to apply a function (Value) to arguments (Values)
-    pub(super) fn apply_function(&mut self, func: Value, args: Vec<Value>) -> Result<Value, String> {
+    pub(super) fn apply_function(&mut self, func: Value, args: Vec<Value>) -> InterpreterResult<Value> {
         match func {
             Value::Function { params, body } => {
                 if params.len() != args.len() {
-                    return Err(format!(
+                    return Err(RuntimeError::ArgumentError(format!(
                         "Expected {} arguments, got {}",
                         params.len(),
                         args.len()
-                    ));
+                    )));
                 }
 
                 self.env.push_scope();
@@ -79,29 +89,86 @@ impl Interpreter {
 
                 Ok(result)
             }
-            _ => Err("Not a callable function".to_string()),
+            _ => Err(RuntimeError::TypeMismatch {
+                expected: "Function".to_string(),
+                found: format!("{}", func),
+            }),
         }
     }
 
     /// Evaluates an imported file and returns its exports
-    pub(super) fn eval_import_file(&mut self, path: &str) -> Result<Value, String> {
-        let source = fs::read_to_string(path).map_err(|e| format!("Failed to read import '{}': {}", path, e))?;
+    pub(super) fn eval_import_file(&mut self, path: &str) -> InterpreterResult<Value> {
+        let canonical_path = fs::canonicalize(path)
+            .map_err(|e| RuntimeError::ImportError(format!("Failed to resolve path '{}': {}", path, e)))?
+            .to_string_lossy()
+            .to_string();
+
+        // Check cache first
+        if let Some(cached_module) = self.module_cache.borrow().get(&canonical_path) {
+            return Ok(cached_module.clone());
+        }
+
+        // Check for cycles
+        if self.loading_modules.borrow().contains(&canonical_path) {
+            return Err(RuntimeError::ImportError(format!("Circular dependency detected: {}", canonical_path)));
+        }
+
+        // Mark as loading
+        self.loading_modules.borrow_mut().insert(canonical_path.clone());
+
+        // Read file
+        let source_result = fs::read_to_string(&canonical_path);
+        
+        let source: String = match source_result {
+            Ok(s) => s,
+            Err(e) => {
+                self.loading_modules.borrow_mut().remove(&canonical_path);
+                return Err(RuntimeError::ImportError(format!("Failed to read import '{}': {}", canonical_path, e)));
+            }
+        };
         
         // Tokenize
         let mut lexer = Lexer::new(&source);
-        let tokens = lexer.tokenize()?;
+        let tokens: Vec<_> = match lexer.tokenize() {
+            Ok(t) => t,
+            Err(e) => {
+                self.loading_modules.borrow_mut().remove(&canonical_path);
+                return Err(RuntimeError::from(e));
+            }
+        };
         
         // Parse
         let mut parser = Parser::new(tokens);
-        let ast = parser.parse()?;
+        let ast = match parser.parse() {
+             Ok(a) => a,
+             Err(e) => {
+                self.loading_modules.borrow_mut().remove(&canonical_path);
+                return Err(RuntimeError::from(e));
+             }
+        };
         
-        // created new interpreter for isolation
-        let mut module_interpreter = Interpreter::new();
-        module_interpreter.eval_program(ast)?;
+        // Interprete with shared cache
+        let mut module_interpreter = Interpreter {
+            env: Environment::new(),
+            is_returning: false,
+            module_cache: Rc::clone(&self.module_cache),
+            loading_modules: Rc::clone(&self.loading_modules),
+        };
+        module_interpreter.init_builtins();
+        
+        if let Err(e) = module_interpreter.eval_program(ast) {
+             self.loading_modules.borrow_mut().remove(&canonical_path);
+             return Err(e);
+        }
         
         // Extract exports
-        let exports = module_interpreter.env.get_exports();
-        Ok(Value::Map(exports))
+        let exports = Value::Map(module_interpreter.env.get_exports());
+        
+        // Store in cache and remove from loading
+        self.module_cache.borrow_mut().insert(canonical_path.clone(), exports.clone());
+        self.loading_modules.borrow_mut().remove(&canonical_path);
+        
+        Ok(exports)
     }
 }
 
@@ -123,7 +190,7 @@ mod tests {
         let mut parser = Parser::new(tokens);
         let ast = parser.parse()?;
         let mut interpreter = Interpreter::new();
-        interpreter.eval_program(ast)
+        interpreter.eval_program(ast).map_err(|e| e.to_string())
     }
 
     #[test]

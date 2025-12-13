@@ -16,7 +16,15 @@ impl Transpiler {
             scopes: vec![HashSet::new()], // Global scope
         }
     }
+}
 
+impl Default for Transpiler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Transpiler {
     pub fn transpile(&mut self, stmts: &[Stmt]) -> String {
         self.code.clear();
         self.code.push_str("use rustx_core::value::Value;\n");
@@ -80,15 +88,11 @@ impl Transpiler {
             }
             Stmt::Function { name, params, body } => {
                  // Transpile as inner function to support recursion
-                 // Note: Inner functions cannot capture environment, strictly pure or arg-based
-                 
                  let params_str = params.iter().map(|p| format!("{}: Value", p)).collect::<Vec<_>>().join(", ");
                  
                  self.push_line(&format!("fn {}({}) -> Result<Value, String> {{", name, params_str));
                  self.indent_level += 1;
                  
-                 // We don't need to declare params in scope because they are args
-                 // But we might need to track them if we check scope?
                  self.enter_scope();
                  for param in params {
                      self.declare(param.clone());
@@ -114,9 +118,7 @@ impl Transpiler {
                 self.push_line(&format!("while {}.is_truthy() {{", cond_code));
                 self.indent_level += 1;
                 
-                // Body
                  if let Expr::Block(stmts) = &**body {
-                     // We just execute stmts, ignore return value
                      let block_inner = self.transpile_block_body(stmts, false);
                      self.push_line(&block_inner);
                  }
@@ -126,9 +128,6 @@ impl Transpiler {
             }
             Stmt::For { iterator, iterable, body } => {
                  let iter_code = self.transpile_expr_string(iterable);
-                 // Need to handle different iterables?
-                 // Assume array for now -> .as_array().unwrap().iter()
-                 // Use `into_iter()` on clone? `Value` is cloneable.
                  self.push_line(&format!("for {}_ref in {}.as_array().unwrap().iter() {{", iterator, iter_code));
                  self.indent_level += 1;
                  self.enter_scope();
@@ -159,70 +158,51 @@ impl Transpiler {
             Expr::Null => "Value::Null".to_string(),
             Expr::Ident(name) => format!("{}.clone()", name),
             Expr::TemplateString(s) => {
-                // Parse template string "Hello {name}!" -> format!("Hello {}!", name)
                 let mut format_str = String::new();
-                let mut args = Vec::new();
-                let mut chars = s.chars().peekable();
-                
-                while let Some(ch) = chars.next() {
-                    if ch == '{' {
-                        if let Some(&next) = chars.peek() {
-                            if next == '{' {
-                                // Escaped {{
-                                format_str.push_str("{{"); // Rust format escape is {{
-                                chars.next(); 
-                            } else {
-                                // Variable start
-                                let mut var_name = String::new();
-                                while let Some(&c) = chars.peek() {
-                                    if c == '}' {
-                                        chars.next(); // consume }
-                                        break;
-                                    }
-                                    var_name.push(chars.next().unwrap());
-                                }
-                                
-                                if !var_name.is_empty() {
-                                    format_str.push_str("{}");
-                                    args.push(var_name);
-                                }
-                            }
-                        } else {
-                             // Trailing {
-                             format_str.push('{');
-                        }
-                    } else if ch == '}' {
+                 let mut args = Vec::new();
+                 let mut chars = s.chars().peekable();
+                 
+                 while let Some(ch) = chars.next() {
+                     if ch == '{' {
                          if let Some(&next) = chars.peek() {
-                            if next == '}' {
-                                // Escaped }}
-                                format_str.push_str("}}"); 
-                                chars.next();
-                            } else {
-                                format_str.push('}');
-                            }
+                             if next == '{' {
+                                 format_str.push_str("{{");
+                                 chars.next(); 
+                             } else {
+                                 let mut var_name = String::new();
+                                 while let Some(&c) = chars.peek() {
+                                     if c == '}' { chars.next(); break; }
+                                     var_name.push(chars.next().unwrap());
+                                 }
+                                 if !var_name.is_empty() {
+                                     format_str.push_str("{}");
+                                     args.push(var_name);
+                                 }
+                             }
                          } else {
-                             format_str.push('}');
+                              format_str.push('{');
                          }
-                    } else {
-                        format_str.push(ch);
-                    }
-                }
-                
-                if args.is_empty() {
-                    format!("Value::String(\"{}\".to_string())", format_str)
-                } else {
-                    let args = args.iter().map(|a| format!("{}", a)).collect::<Vec<_>>().join(", ");
-                    format!("Value::String(format!(\"{}\", {}))", format_str, args)
-                }
+                     } else if ch == '}' {
+                          if let Some(&next) = chars.peek() {
+                             if next == '}' { format_str.push_str("}}"); chars.next(); } else { format_str.push('}'); }
+                          } else { format_str.push('}'); }
+                     } else {
+                         format_str.push(ch);
+                     }
+                 }
+                 
+                 if args.is_empty() {
+                     format!("Value::String(\"{}\".to_string())", format_str)
+                 } else {
+                     let args = args.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(", ");
+                     format!("Value::String(format!(\"{}\", {}))", format_str, args)
+                 }
             }
             Expr::Array(items) => {
                 let items_code: Vec<String> = items.iter().map(|i| self.transpile_expr_string(i)).collect();
                 format!("Value::Array(vec![{}])", items_code.join(", "))
             }
             Expr::Map(_pairs) => {
-                 // HashMap construction 
-                 // Value::Map(HashMap::from([("k".to_string(), v), ...]))
-                 // simplified
                  "Value::Null /* Map todo */".to_string()
             },
             Expr::Binary { left, op, right } => {
@@ -254,18 +234,10 @@ impl Transpiler {
             Expr::Block(stmts) => {
                 let mut output = String::new();
                 output.push_str("{\n");
-                // indentation?
-                
-                // We need to use the helper but capture output differently or format it.
-                // Simple approach: Use helper that modifies self.code, store it, clear it, restore it?
-                // The helper `transpile_block_body` does exactly that.
-                
                 self.indent_level += 1;
                 self.enter_scope();
                 let body = self.transpile_block_body(stmts, true);
-                
                 output.push_str(&body);
-                
                 self.exit_scope();
                 self.indent_level -= 1;
                 output.push_str(&format!("{}}}", "    ".repeat(self.indent_level)));
@@ -290,39 +262,60 @@ impl Transpiler {
                            return format!("{{ {} println!(); Value::Null }}", prints);
                        },
                        "range" => {
-                            // range(start, end) compile to Array
-                            // implement simple range for 1 or 2 args
-                            // Value::Array((start..end).map(Value::Int).collect())
-                            // Todo: implement run-time helper for this
-                            return "Value::Array(vec![]) /* range todo */".to_string();
+                            // range(end) or range(start, end)
+                            let args_code: Vec<String> = args.iter().map(|a| self.transpile_expr_string(a)).collect();
+                            if args_code.len() == 1 {
+                                return format!("Value::range(0, {}.as_int()?, 1)?", args_code[0]);
+                            } else if args_code.len() == 2 {
+                                return format!("Value::range({}.as_int()?, {}.as_int()?, 1)?", args_code[0], args_code[1]);
+                            } else if args_code.len() == 3 {
+                                return format!("Value::range({}.as_int()?, {}.as_int()?, {}.as_int()?)?", args_code[2], args_code[0], args_code[1]);
+                            }
                        },
+                       "len" => return format!("Value::Int({}.len()?)", self.transpile_expr_string(&args[0])),
+                       "push" => return format!("{}.push({})?", self.transpile_expr_string(&args[0]), self.transpile_expr_string(&args[1])),
+                       "pop" => return format!("{}.pop()?", self.transpile_expr_string(&args[0])),
+                       "split" => return format!("{}.split(&{})?", self.transpile_expr_string(&args[0]), self.transpile_expr_string(&args[1])),
+                       "upper" => return format!("{}.upper()?", self.transpile_expr_string(&args[0])),
+                       "lower" => return format!("{}.lower()?", self.transpile_expr_string(&args[0])),
+                       "trim" => return format!("{}.trim()?", self.transpile_expr_string(&args[0])),
+                       "abs" => return format!("{}.abs()?", self.transpile_expr_string(&args[0])),
+                       "floor" => return format!("{}.floor()?", self.transpile_expr_string(&args[0])),
+                       "ceil" => return format!("{}.ceil()?", self.transpile_expr_string(&args[0])),
                        _ => {}
                    }
                 }
                 
                 let callee_code = self.transpile_expr_string(callee);
                 let args_code = args.iter().map(|a| self.transpile_expr_string(a)).collect::<Vec<_>>().join(", ");
-                // Closure Call
                 format!("{}({})?", callee_code, args_code)
             }
-            Expr::MethodCall { object: _, method: _, args: _ } => {
-                 // Implement method calls as Value helper calls if I added them?
-                 // I haven't added `upper`, `push` etc to Value yet.
-                 // So maybe compile to runtime helper? 
-                 // For now: placeholder
-                 "Value::Null /* method todo */".to_string()
+            Expr::MethodCall { object, method, args } => {
+                let obj_code = self.transpile_expr_string(object);
+                let args_code: Vec<String> = args.iter().map(|a| self.transpile_expr_string(a)).collect();
+                
+                 match method.as_str() {
+                     "upper" => format!("{}.upper()?", obj_code),
+                     "lower" => format!("{}.lower()?", obj_code),
+                     "trim" => format!("{}.trim()?", obj_code),
+                     "abs" => format!("{}.abs()?", obj_code),
+                     "floor" => format!("{}.floor()?", obj_code),
+                     "ceil" => format!("{}.ceil()?", obj_code),
+                     "pop" => format!("{}.pop()?", obj_code),
+                     "split" => format!("{}.split(&{})?", obj_code, args_code[0]),
+                     "push" => format!("{}.push({})?", obj_code, args_code[0]),
+                     "len" => format!("Value::Int({}.len()?)", obj_code),
+                     _ => "Value::Null".to_string(), // Missing: map, filter etc
+                 }
             }
             _ => "Value::Null".to_string(),
         }
     }
     
     // Returns the body of a block as string. 
-    // `return_last`: if true, checks if last stmt is expression and returns it without semicolon.
     fn transpile_block_body(&mut self, stmts: &[Stmt], return_last: bool) -> String {
          let old_code = std::mem::take(&mut self.code);
          let old_indent = self.indent_level;
-         
-         // Fix indent for the capture? No, `push_line` uses current indent.
          
          let len = stmts.len();
          if len == 0 {
@@ -332,7 +325,6 @@ impl Transpiler {
          } else {
              for (i, stmt) in stmts.iter().enumerate() {
                  if return_last && i == len - 1 {
-                     // Last statement, try to return it
                      match stmt {
                          Stmt::Expr(e) => {
                              let expr_code = self.transpile_expr_string(e);
@@ -340,14 +332,9 @@ impl Transpiler {
                          }
                          Stmt::Return(_) => { 
                              self.transpile_stmt(stmt);
-                             // Return stmt already returns, so technically block returns ! which works?
-                             // But we need block to evaluate to value...
-                             // Convert `return x` to `x`? No.
-                             // Logic error: `return` exits function, not block.
                          }
                          _ => {
                              self.transpile_stmt(stmt);
-                             // Return Null
                              self.push_line("Value::Null"); 
                          }
                      }
@@ -358,7 +345,7 @@ impl Transpiler {
          }
          
          let buf = std::mem::replace(&mut self.code, old_code);
-         self.indent_level = old_indent; // restore indent if it drifted (shouldn't)
+         self.indent_level = old_indent; 
          buf
     }
 }

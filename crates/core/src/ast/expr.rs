@@ -1,4 +1,4 @@
-/// Expression nodes for RustX AST
+//! Expression nodes for RustX AST
 
 /// Expression enum representing all expression types
 #[derive(Debug, Clone, PartialEq)]

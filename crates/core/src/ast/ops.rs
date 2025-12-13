@@ -1,4 +1,4 @@
-/// Operator types for RustX AST
+//! Operator types for RustX AST
 
 /// Binary operators
 #[derive(Debug, Clone, PartialEq)]

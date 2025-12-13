@@ -15,7 +15,7 @@ fn test_rx_macro_string() {
 #[test]
 fn test_rx_macro_boolean() {
     let result: bool = rx! { "5 > 3" };
-    assert_eq!(result, true);
+    assert!(result);
 }
 
 #[test]

@@ -158,20 +158,7 @@ pub fn rx_with(input: TokenStream) -> TokenStream {
     let var_conversions = var_idents.iter().map(|var| {
         let temp_name = syn::Ident::new(&format!("__rustx_var_{}", var), var.span());
         quote! {
-            let #temp_name: Value = {
-                use rustx_core::Value;
-                // Try different type conversions
-                if let Ok(v) = TryInto::<i64>::try_into(#var) {
-                    Value::Int(v)
-                } else if let Ok(v) = TryInto::<f64>::try_into(#var) {
-                    Value::Float(v)
-                } else if let Ok(v) = TryInto::<bool>::try_into(#var) {
-                    Value::Bool(v)
-                } else {
-                    // Default: convert to string
-                    Value::String(format!("{:?}", #var))
-                }
-            };
+            let #temp_name: Value = ToRustXValue::to_rustx_value(&#var);
         }
     });
     
@@ -189,6 +176,17 @@ pub fn rx_with(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         {
             use rustx_core::{Interpreter, Lexer, Parser, Value};
+            
+            trait ToRustXValue {
+                fn to_rustx_value(&self) -> Value;
+            }
+            
+            impl ToRustXValue for i64 { fn to_rustx_value(&self) -> Value { Value::Int(*self) } }
+            impl ToRustXValue for i32 { fn to_rustx_value(&self) -> Value { Value::Int(*self as i64) } }
+            impl ToRustXValue for f64 { fn to_rustx_value(&self) -> Value { Value::Float(*self) } }
+            impl ToRustXValue for bool { fn to_rustx_value(&self) -> Value { Value::Bool(*self) } }
+            impl ToRustXValue for String { fn to_rustx_value(&self) -> Value { Value::String(self.clone()) } }
+            impl ToRustXValue for &str { fn to_rustx_value(&self) -> Value { Value::String(self.to_string()) } }
             
             // Convert variables to RustX values in outer scope
             #(#var_conversions)*
@@ -208,13 +206,50 @@ pub fn rx_with(input: TokenStream) -> TokenStream {
                 .expect("Failed to execute RustX code");
             
             // Convert result based on expected type
-            match result_value {
-                Value::Int(n) => n as _,
-                Value::Float(f) => f as _,
-                Value::String(s) => s as _,
-                Value::Bool(b) => b as _,
-                _ => panic!("Cannot convert result value"),
+            trait FromRustX: Sized {
+                fn from_rustx(value: Value) -> Self;
             }
+            
+            impl FromRustX for i64 {
+                fn from_rustx(value: Value) -> Self {
+                    match value {
+                        Value::Int(n) => n,
+                        Value::Float(f) => f as i64,
+                        _ => panic!("Cannot convert {:?} to i64", value),
+                    }
+                }
+            }
+            
+            impl FromRustX for f64 {
+                fn from_rustx(value: Value) -> Self {
+                    match value {
+                        Value::Float(f) => f,
+                        Value::Int(n) => n as f64,
+                        _ => panic!("Cannot convert {:?} to f64", value),
+                    }
+                }
+            }
+            
+            impl FromRustX for String {
+                fn from_rustx(value: Value) -> Self {
+                    match value {
+                        Value::String(s) => s,
+                        _ => panic!("Cannot convert {:?} to String", value),
+                    }
+                }
+            }
+            
+            impl FromRustX for bool {
+                fn from_rustx(value: Value) -> Self {
+                    match value {
+                        Value::Bool(b) => b,
+                        _ => panic!("Cannot convert {:?} to bool", value),
+                    }
+                }
+            }
+
+            // Convert result based on expected type
+            FromRustX::from_rustx(result_value)
         }
     };
     
