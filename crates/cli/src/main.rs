@@ -1,18 +1,19 @@
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 use rustx_core::{Interpreter, Lexer, Parser as RxParser, Value};
-use rustx_core::compiler::transpiler::Transpiler;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 use std::fs;
+
+mod project_builder;
+use project_builder::ProjectBuilder;
 use std::path::PathBuf;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
-use std::process::Command as SysCommand;
+use std::time::Instant;
 
 #[derive(Parser)]
 #[command(name = "rustx")]
 #[command(about = "RustX Language Interpreter", long_about = None)]
-#[command(version = "0.2.0")]
+#[command(version = "0.3.0")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -53,6 +54,9 @@ enum Commands {
         /// Show execution time
         #[arg(long)]
         time: bool,
+        /// Verbose output
+        #[arg(short, long)]
+        verbose: bool,
     },
     /// Compile a script to an executable
     Build {
@@ -73,7 +77,8 @@ fn main() {
             ast,
             tokens,
             time,
-        }) => run_file(&file, ast, tokens, time, false),
+            verbose,
+        }) => run_file(&file, ast, tokens, time, verbose),
         Some(Commands::Build { file, output }) => build_file(&file, output),
         None => {
             if let Some(file) = cli.file {
@@ -87,7 +92,7 @@ fn main() {
 
 /// Runs the REPL (Read-Eval-Print Loop)
 fn run_repl() {
-    println!("{}", "RustX Language REPL v0.2.0".bright_cyan().bold());
+    println!("{}", "RustX Language REPL v0.3.0".bright_cyan().bold());
     println!(
         "{}",
         "Type ':help' for commands, ':exit' or Ctrl+D to quit\n"
@@ -203,27 +208,72 @@ fn run_file(path: &PathBuf, show_ast: bool, show_tokens: bool, show_time: bool, 
             path.display().to_string().bright_white()
         );
     }
-
-    let mut interpreter = Interpreter::new();
-    match execute(&source, &mut interpreter, show_ast, show_tokens) {
-        Ok(value) => {
-            if value != Value::Null {
-                println!("{}", value);
-            }
-
-            if let Some(start) = start_time {
-                let duration = start.elapsed();
-                println!(
-                    "\n{} {:.3}ms",
-                    "Execution time:".bright_black(),
-                    duration.as_secs_f64() * 1000.0
-                );
-            }
-        }
+    
+    // Parse first to check for JIT requirement
+    let mut lexer = Lexer::new(&source);
+    let tokens = match lexer.tokenize() {
+        Ok(t) => t,
         Err(e) => {
-            eprintln!("{} {}", "Error:".red().bold(), e.bright_white());
+             eprintln!("{} {}", "Lexer Error:".red().bold(), e);
+             std::process::exit(1);
+        }
+    };
+
+    let mut parser = RxParser::new(tokens.clone());
+    let ast = match parser.parse() {
+        Ok(a) => a,
+        Err(e) => {
+             eprintln!("{} {}", "Parser Error:".red().bold(), e);
+             std::process::exit(1);
+        }
+    };
+    
+    // Display AST/Tokens if requested (even if JIT)
+    if show_tokens {
+        println!("{}", "=== Tokens ===".bright_yellow().bold());
+        for (i, token) in tokens.iter().enumerate() {
+            println!("{:3}: {:?}", i, token);
+        }
+        println!();
+    }
+    if show_ast {
+        println!("{}", "=== AST ===".bright_yellow().bold());
+        for (i, stmt) in ast.iter().enumerate() {
+            println!("{:3}: {:#?}", i, stmt);
+        }
+        println!();
+    }
+
+    if is_jit_required(&ast) {
+        if verbose {
+            println!("{}", "JIT compilation required due to native dependencies/blocks.".yellow());
+        }
+        if let Err(e) = ProjectBuilder::build(&source, &ast, None, true, verbose) {
+            eprintln!("{} {}", "JIT Execution Error:".red().bold(), e);
             std::process::exit(1);
         }
+    } else {
+        let mut interpreter = Interpreter::new();
+        match interpreter.eval_program(ast).map_err(|e| e.to_string()) {
+            Ok(value) => {
+                if value != Value::Null {
+                    println!("{}", value);
+                }
+            }
+            Err(e) => {
+                eprintln!("{} {}", "Error:".red().bold(), e.bright_white());
+                std::process::exit(1);
+            }
+        }
+    }
+
+    if let Some(start) = start_time {
+        let duration = start.elapsed();
+        println!(
+            "\n{} {:.3}ms",
+            "Execution time:".bright_black(),
+            duration.as_secs_f64() * 1000.0
+        );
     }
 }
 
@@ -239,107 +289,25 @@ fn build_file(path: &PathBuf, output: Option<PathBuf>) {
             std::process::exit(1);
         }
     };
-
-    // 1. Transpile to Rust
+    
+    // Parse
     let mut lexer = Lexer::new(&source);
-    let tokens = match lexer.tokenize() {
-        Ok(t) => t,
-        Err(e) => {
-             eprintln!("{} {}", "Lexer Error:".red().bold(), e);
-             std::process::exit(1);
-        }
-    };
-    
+    let tokens = lexer.tokenize().expect("Lexer error");
     let mut parser = RxParser::new(tokens);
-    let ast = match parser.parse() {
-        Ok(a) => a,
-        Err(e) => {
-             eprintln!("{} {}", "Parser Error:".red().bold(), e);
-             std::process::exit(1);
-        }
-    };
+    let ast = parser.parse().expect("Parser error");
     
-    let mut transpiler = Transpiler::new();
-    let rust_code = transpiler.transpile(&ast);
-    
-    // 2. Setup Build Environment
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-    let build_dir = std::env::temp_dir().join(format!("rustx_build_{}", timestamp));
-    
-    if let Err(e) = fs::create_dir_all(&build_dir) {
-         eprintln!("{} {}", "Error creating temp dir:".red().bold(), e);
+    // Build
+    if let Err(e) = ProjectBuilder::build(&source, &ast, output, false, true) {
+         eprintln!("{} {}", "Build Error:".red().bold(), e);
          std::process::exit(1);
     }
     
-    println!("{} {}", "Build setup:".dimmed(), build_dir.display());
-    
-    // Initialize cargo project
-    let status = SysCommand::new("cargo")
-        .arg("init")
-        .arg("--bin")
-        .arg("--name")
-        .arg("app")
-        .current_dir(&build_dir)
-        .output();
-        
-    if let Err(e) = status {
-         eprintln!("{} {}", "Error initializing cargo:".red().bold(), e);
-         std::process::exit(1);
-    }
-    
-    // Add dependency
-    // Hardcoded absolute path to core
-    let core_path = "/home/grandpa/me/code/rust/RustX/crates/core";
-    let cargo_toml_path = build_dir.join("Cargo.toml");
-    let mut cargo_toml = fs::read_to_string(&cargo_toml_path).unwrap();
-    cargo_toml.push_str(&format!("\nrustx_core = {{ path = \"{}\" }}\n", core_path));
-    fs::write(&cargo_toml_path, cargo_toml).unwrap();
-    
-    // Write source
-    let main_rs_path = build_dir.join("src/main.rs");
-    if let Err(e) = fs::write(&main_rs_path, rust_code) {
-         eprintln!("{} {}", "Error writing source:".red().bold(), e);
-         std::process::exit(1);
-    }
-    
-    // 3. Compile
-    println!("{}", "Compiling binary...".bright_yellow());
-    let compile_status = SysCommand::new("cargo")
-        .arg("build")
-        .arg("--release")
-        .current_dir(&build_dir)
-        .output();
-        
-    match compile_status {
-        Ok(res) => {
-            if !res.status.success() {
-                eprintln!("{}", "Compilation failed:".red().bold());
-                eprintln!("{}", String::from_utf8_lossy(&res.stderr));
-                std::process::exit(1);
-            }
-        }
-        Err(e) => {
-             eprintln!("{} {}", "Failed to run cargo build:".red().bold(), e);
-             std::process::exit(1);
-        }
-    }
-    
-    // 4. Move Output
-    let binary = build_dir.join("target/release/app");
-    let output_path = output.unwrap_or_else(|| {
-        let file_stem = path.file_stem().unwrap().to_str().unwrap();
-        PathBuf::from(file_stem)
-    });
-    
-    if let Err(e) = fs::copy(&binary, &output_path) {
-         eprintln!("{} {}", "Error moving binary:".red().bold(), e);
-         std::process::exit(1);
-    }
-    
-    println!("{} {} ({:.2}s)", "Successfully built:".bright_green().bold(), output_path.display(), start_time.elapsed().as_secs_f32());
-    
-    // Cleanup (optional, maybe keep for debugging?)
-    // fs::remove_dir_all(&build_dir).ok();
+    println!("{}", format!("Build completed in {:.2}s", start_time.elapsed().as_secs_f32()).green());
+}
+
+fn is_jit_required(ast: &[rustx_core::ast::Stmt]) -> bool {
+    use rustx_core::ast::Stmt;
+    ast.iter().any(|stmt| matches!(stmt, Stmt::RustImport { .. } | Stmt::RustBlock { .. }))
 }
 
 /// Executes source code
