@@ -533,4 +533,32 @@ impl Value {
              _ => Err(format!("Type {} is not callable", self.type_name())),
          }
     }
+
+    pub fn get_index(&self, index: &Value) -> Result<Value, String> {
+        match self {
+            Value::Array(arr) => {
+                 let i = index.as_int()?;
+                 if i < 0 {
+                     return Err("Index cannot be negative".to_string());
+                 }
+                 arr.get(i as usize).cloned().ok_or_else(|| "Index out of bounds".to_string())
+            }
+            Value::Map(map) => {
+                 let key = match index {
+                     Value::String(s) => s.clone(),
+                     _ => return Err("Map key must be a string".to_string()),
+                 };
+                 map.get(&key).cloned().ok_or_else(|| format!("Key '{}' not found", key))
+            }
+            Value::String(s) => {
+                 let i = index.as_int()?;
+                 if i < 0 {
+                     return Err("Index cannot be negative".to_string());
+                 }
+                 s.chars().nth(i as usize).map(|c| Value::String(c.to_string())).ok_or_else(|| "Index out of bounds".to_string())
+            }
+            _ => Err(format!("Type {} is not indexable", self.type_name())),
+        }
+    }
 }
+

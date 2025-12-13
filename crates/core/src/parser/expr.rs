@@ -270,12 +270,18 @@ fn parse_primary(parser: &mut Parser) -> Result<Expr, String> {
 /// Parses an array literal
 fn parse_array(parser: &mut Parser) -> Result<Expr, String> {
     parser.advance(); // consume '['
+    parser.skip_newlines();
+
     let mut elements = Vec::new();
 
     while !matches!(parser.current_token(), Token::RBracket) {
+        parser.skip_newlines();
+        if matches!(parser.current_token(), Token::RBracket) { break; }
+
         elements.push(parse_expression(parser)?);
         if matches!(parser.current_token(), Token::Comma) {
             parser.advance();
+            parser.skip_newlines();
         }
     }
 
@@ -309,6 +315,9 @@ fn parse_map_contents(parser: &mut Parser) -> Result<Expr, String> {
     let mut pairs = Vec::new();
 
     while !matches!(parser.current_token(), Token::RBrace) {
+        parser.skip_newlines();
+        if matches!(parser.current_token(), Token::RBrace) { break; }
+
         let key = match parser.current_token() {
             Token::String(s) => s.clone(),
             _ => return Err("Expected string key in map".to_string()),

@@ -288,6 +288,11 @@ impl Transpiler {
                  }
                  format!("Value::Map({{ let mut map = HashMap::new(); {} map }})", inserts.join(" "))
             },
+            Expr::Index { object, index } => {
+                 let obj_code = self.transpile_expr_string(object);
+                 let idx_code = self.transpile_expr_string(index);
+                 format!("{}.get_index(&{})?", obj_code, idx_code)
+            },
             Expr::Binary { left, op, right } => {
                 let l = self.transpile_expr_string(left);
                 let r = self.transpile_expr_string(right);

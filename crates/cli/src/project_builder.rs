@@ -55,6 +55,9 @@ impl ProjectBuilder {
             
         cargo_toml.push_str(&format!("\nrustx_core = {{ path = \"{}\" }}\n", core_path.display()));
         
+        // Add optimizations
+        cargo_toml.push_str("\n[profile.release]\nlto = true\ncodegen-units = 1\npanic = \"abort\"\nopt-level = 3\n");
+        
         // Add dynamic imports
         for stmt in ast {
             if let Stmt::RustImport { crate_name, version, .. } = stmt {
@@ -76,10 +79,10 @@ impl ProjectBuilder {
             
         // 5. Build/Run
         if run {
-            println!("{}", "Compiling and running (this may take a while)...".bright_yellow());
+            println!("{}", "Compiling and running (release mode)...".bright_yellow());
             let status = Command::new("cargo")
                 .arg("run")
-                //.arg("--release") // Use debug build for faster compilation
+                .arg("--release") 
                 //.arg("--quiet") // Show compilation progress
                 .current_dir(&build_dir)
                 .status()
