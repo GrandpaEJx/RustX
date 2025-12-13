@@ -1,31 +1,19 @@
-use crate "actix-web" = "4"
+rust {}
+print("Starting Web Server Example...")
 
-rust {
-    use actix_web::{get, App, HttpServer, Responder};
-
-    #[get("/")]
-    async fn hello() -> impl Responder {
-        "Hello from RustX Web Server!"
-    }
-
-    #[actix_web::main]
-    async fn run_actix() -> std::io::Result<()> {
-        println!("Server running locally at http://127.0.0.1:8080");
-        HttpServer::new(|| {
-            App::new().service(hello)
-        })
-        .bind(("127.0.0.1", 8080))?
-        .run()
-        .await
-    }
-
-    fn start_server() -> Result<Value, String> {
-        match run_actix() {
-            Ok(_) => Ok(Value::Null),
-            Err(e) => Err(e.to_string())
-        }
-    }
+fn home(req) {
+    print("Home request")
+    return web.json({ "message": "Welcome to RustX Web Framework!", "status": "ok" })
 }
 
-print("Initializing Actix Web Server...")
-start_server()
+fn echo(req) {
+    print("Received echo request:", req)
+    return web.json(req)
+}
+
+let server = web.app()
+server.get("/", home)
+server.post("/echo", echo)
+
+print("Listening on 8080...")
+server.listen(8080)

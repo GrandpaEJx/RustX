@@ -45,35 +45,41 @@ impl Interpreter {
     /// Initializes built-in functions
     fn init_builtins(&mut self) {
         // Core builtins
-        self.env.set("print".to_string(), Value::NativeFunction(|args| {
-            let output = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>().join(" ");
-            println!("{}", output);
+        self.env.set("print".to_string(), Value::NativeFunction(std::sync::Arc::new(|args: Vec<Value>| {
+            let text = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>().join(" ");
+            println!("{}", text);
             Ok(Value::Null)
-        }));
+        })));
 
         // JSON
         let mut json_mod = HashMap::new();
-        json_mod.insert("parse".to_string(), Value::NativeFunction(crate::stdlib::json::parse));
-        json_mod.insert("stringify".to_string(), Value::NativeFunction(crate::stdlib::json::stringify));
+        json_mod.insert("parse".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::json::parse)));
+        json_mod.insert("stringify".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::json::stringify)));
         self.env.set("json".to_string(), Value::Map(json_mod));
         
         // HTTP
         let mut http_mod = HashMap::new();
-        http_mod.insert("get".to_string(), Value::NativeFunction(crate::stdlib::http::get));
-        http_mod.insert("post".to_string(), Value::NativeFunction(crate::stdlib::http::post));
+        http_mod.insert("get".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::http::get)));
+        http_mod.insert("post".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::http::post)));
         self.env.set("http".to_string(), Value::Map(http_mod));
         
         // OS
         let mut os_mod = HashMap::new();
-        os_mod.insert("env".to_string(), Value::NativeFunction(crate::stdlib::os::env));
-        os_mod.insert("args".to_string(), Value::NativeFunction(crate::stdlib::os::args));
+        os_mod.insert("env".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::os::env)));
+        os_mod.insert("args".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::os::args)));
         self.env.set("os".to_string(), Value::Map(os_mod));
         
         // Time
         let mut time_mod = HashMap::new();
-        time_mod.insert("now".to_string(), Value::NativeFunction(crate::stdlib::time::now));
-        time_mod.insert("sleep".to_string(), Value::NativeFunction(crate::stdlib::time::sleep));
+        time_mod.insert("now".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::time::now)));
+        time_mod.insert("sleep".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::time::sleep)));
         self.env.set("time".to_string(), Value::Map(time_mod));
+        
+        // Web
+        let mut web_mod = HashMap::new();
+        web_mod.insert("app".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::web::app)));
+        web_mod.insert("json".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::web::json)));
+        self.env.set("web".to_string(), Value::Map(web_mod));
     }
 
     /// Evaluates a program (list of statements)

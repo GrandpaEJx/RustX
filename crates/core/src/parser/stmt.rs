@@ -14,6 +14,7 @@ pub fn parse_statement(parser: &mut Parser) -> Result<Stmt, String> {
         Token::Import => parse_import(parser),
         Token::Use => parse_use(parser),
         Token::Rust => parse_rust_block(parser),
+        Token::Let => parse_declaration(parser),
         _ => {
             // Try to parse as assignment or expression
             let expr = parser.parse_expression()?;
@@ -30,6 +31,23 @@ pub fn parse_statement(parser: &mut Parser) -> Result<Stmt, String> {
             Ok(Stmt::Expr(expr))
         }
     }
+}
+
+/// Parses a variable declaration
+fn parse_declaration(parser: &mut Parser) -> Result<Stmt, String> {
+    parser.advance(); // consume 'let'
+    
+    let name = match parser.current_token() {
+        Token::Ident(n) => n.clone(),
+        _ => return Err("Expected variable name".to_string()),
+    };
+    parser.advance();
+
+    parser.expect(Token::Eq)?;
+    
+    let value = parser.parse_expression()?;
+    
+    Ok(Stmt::Let { name, value })
 }
 
 /// Parses a function declaration
@@ -182,24 +200,6 @@ fn parse_rust_block(parser: &mut Parser) -> Result<Stmt, String> {
     parser.expect(Token::LBrace)?;
     
     // For now, we'll just consume tokens until RBrace and reconstruct the string.
-    // Ideally, the lexer would support a raw string mode or we capture the span.
-    // Since we don't have spans easily accessible here without bigger refactor,
-    // we will rely on a simpler approach: 
-    // Just expect a string literal containing the code? 
-    // No, users want `rust { code }`.
-    // The lexer will tokenize the inside of the block.
-    // We need to reconstruct the source code.
-    // This is tricky without source spans.
-    // Alternative: Lexer supports `RawBlock`?
-    // OR: We just parse a string literal: `rust "code"`?
-    // User requested `rust { ... }`.
-    // If we support `rust { ... }`, the lexer will tokenize the content.
-    // Reconstructing it is lossy (whitespace lost).
-    // WORKAROUND: For this iteration, we will require the code to be a string or template string?
-    // No, the plan said `rust { ... }`.
-    // Let's assume for now we can't easily reconstruct without spans.
-    // Hack: We will consume tokens until matching brace and join them with spaces.
-    // This is not perfect but functional for MVP.
     
     let mut code = String::new();
     let mut brace_count = 1;
@@ -253,6 +253,7 @@ fn token_to_string(token: &Token) -> String {
         Token::Use => "use".to_string(),
         Token::Crate => "crate".to_string(),
         Token::Rust => "rust".to_string(),
+        Token::Let => "let".to_string(), // Ensure Let is handled if we use token_to_string for debugging
         Token::As => "as".to_string(),
         Token::Plus => "+".to_string(),
         Token::Minus => "-".to_string(),

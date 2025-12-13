@@ -22,6 +22,7 @@ pub enum Token {
     Crate,
     Rust,
     As,
+    Let,
     
     // Operators
     Plus,
@@ -78,6 +79,7 @@ impl Token {
             "crate" => Some(Token::Crate),
             "rust" => Some(Token::Rust),
             "as" => Some(Token::As),
+            "let" => Some(Token::Let),
             "true" => Some(Token::Bool(true)),
             "false" => Some(Token::Bool(false)),
             _ => None,

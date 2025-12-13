@@ -29,6 +29,13 @@ impl Transpiler {
         self.code.clear();
         self.code.push_str("use rustx_core::value::Value;\n");
         self.code.push_str("use std::collections::HashMap;\n");
+        self.code.push_str("use std::sync::{Arc, OnceLock};\n\n");
+
+        self.code.push_str("static JSON: OnceLock<Value> = OnceLock::new();\n");
+        self.code.push_str("static HTTP: OnceLock<Value> = OnceLock::new();\n");
+        self.code.push_str("static OS: OnceLock<Value> = OnceLock::new();\n");
+        self.code.push_str("static TIME: OnceLock<Value> = OnceLock::new();\n");
+        self.code.push_str("static WEB: OnceLock<Value> = OnceLock::new();\n\n");
 
         self.code.push_str("#[allow(unreachable_code)]\nfn main() -> Result<(), String> {\n");
         self.indent_level += 1;
@@ -37,50 +44,39 @@ impl Transpiler {
         self.push_line("// Stdlib Init");
         
         // JSON
-        self.push_line("{");
         self.push_line("    let mut map = HashMap::new();");
-        self.push_line("    map.insert(\"parse\".to_string(), Value::NativeFunction(rustx_core::stdlib::json::parse));");
-        self.push_line("    map.insert(\"stringify\".to_string(), Value::NativeFunction(rustx_core::stdlib::json::stringify));");
-        self.declare("json".to_string());
-        self.push_line("    let json = Value::Map(map);");
-        
+        self.push_line("    map.insert(\"parse\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::json::parse)));");
+        self.push_line("    map.insert(\"stringify\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::json::stringify)));");
+        self.push_line("    JSON.set(Value::Map(map)).ok();");
+
         // HTTP
         self.push_line("    let mut map = HashMap::new();");
-        self.push_line("    map.insert(\"get\".to_string(), Value::NativeFunction(rustx_core::stdlib::http::get));");
-        self.push_line("    map.insert(\"post\".to_string(), Value::NativeFunction(rustx_core::stdlib::http::post));");
-        self.declare("http".to_string());
-        self.push_line("    let http = Value::Map(map);");
+        self.push_line("    map.insert(\"get\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::http::get)));");
+        self.push_line("    map.insert(\"post\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::http::post)));");
+        self.push_line("    HTTP.set(Value::Map(map)).ok();");
         
         // OS
         self.push_line("    let mut map = HashMap::new();");
-        self.push_line("    map.insert(\"env\".to_string(), Value::NativeFunction(rustx_core::stdlib::os::env));");
-        self.push_line("    map.insert(\"args\".to_string(), Value::NativeFunction(rustx_core::stdlib::os::args));");
-        self.declare("os".to_string());
-        self.push_line("    let os = Value::Map(map);");
+        self.push_line("    map.insert(\"env\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::os::env)));");
+        self.push_line("    map.insert(\"args\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::os::args)));");
+        self.push_line("    OS.set(Value::Map(map)).ok();");
         
         // Time
         self.push_line("    let mut map = HashMap::new();");
-        self.push_line("    map.insert(\"now\".to_string(), Value::NativeFunction(rustx_core::stdlib::time::now));");
-        self.push_line("    map.insert(\"sleep\".to_string(), Value::NativeFunction(rustx_core::stdlib::time::sleep));");
-        self.declare("time".to_string());
-        self.push_line("    let time = Value::Map(map);");
+        self.push_line("    map.insert(\"now\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::time::now)));");
+        self.push_line("    map.insert(\"sleep\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::time::sleep)));");
+        self.push_line("    TIME.set(Value::Map(map)).ok();");
+        
+        // Web
+        self.push_line("    let mut map = HashMap::new();");
+        self.push_line("    map.insert(\"app\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::web::app)));");
+        self.push_line("    map.insert(\"json\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::web::json)));");
+        self.push_line("    WEB.set(Value::Map(map)).ok();");
         
         for stmt in stmts {
             self.transpile_stmt(stmt);
         }
-        
-        self.push_line("}"); // Close block for stdlib scope? No, variables need to be available.
-        // Actually, variables initialized in a block are dropped.
-        // I should NOT use a block wrapper '{' unless I declare them outside.
-        // But I need to avoid name collisions? No, these are top level.
-        // BUT wait. `let json = ...` creates a variable.
-        // Subsequent code uses `json`.
-        // If I put them in a block ` { ... stmts ... }`, then fine.
-        // But `transpile` logic appends statement code *after*.
-        // So I should just declare them in `main` scope.
-        // Remove the `{` and `}` wrapper for safety of scope.
-        // And `self.declare` updates `self.scopes` so `Expr::Ident` knows about them.
-        
+
         self.push_line("Ok(())");
         self.indent_level -= 1;
         self.code.push_str("}\n");
@@ -132,15 +128,18 @@ impl Transpiler {
                 self.push_line(&format!("{};", expr_code));
             }
             Stmt::Function { name, params, body } => {
-                 // Transpile as inner function to support recursion
-                 let params_str = params.iter().map(|p| format!("{}: Value", p)).collect::<Vec<_>>().join(", ");
-                 
-                 self.push_line(&format!("fn {}({}) -> Result<Value, String> {{", name, params_str));
+                 self.push_line(&format!("fn {}(args: Vec<Value>) -> Result<Value, String> {{", name));
                  self.indent_level += 1;
                  
                  self.enter_scope();
-                 for param in params {
-                     self.declare(param.clone());
+                 
+                 // Check arg count
+                 if !params.is_empty() {
+                     self.push_line(&format!("if args.len() != {} {{ return Err(format!(\"Expected {} arguments, got {{}}\", args.len())); }}", params.len(), params.len()));
+                     for (i, param) in params.iter().enumerate() {
+                         self.declare(param.clone());
+                         self.push_line(&format!("let {} = args[{}].clone();", param, i));
+                     }
                  }
                  
                  let body_code = self.transpile_expr_string(body);
@@ -149,6 +148,10 @@ impl Transpiler {
                  self.exit_scope();
                  self.indent_level -= 1;
                  self.push_line("}");
+                 
+                 // Register as Value variable
+                 self.declare(name.clone());
+                 self.push_line(&format!("let {} = Value::NativeFunction(std::sync::Arc::new({}));", name, name));
             }
             Stmt::Return(opt_expr) => {
                 if let Some(expr) = opt_expr {
@@ -222,7 +225,14 @@ impl Transpiler {
                 if self.is_declared(name) {
                     format!("{}.clone()", name)
                 } else {
-                    name.clone()
+                    match name.as_str() {
+                        "json" => "JSON.get().unwrap().clone()".to_string(),
+                        "http" => "HTTP.get().unwrap().clone()".to_string(),
+                        "os" => "OS.get().unwrap().clone()".to_string(),
+                        "time" => "TIME.get().unwrap().clone()".to_string(),
+                        "web" => "WEB.get().unwrap().clone()".to_string(),
+                        _ => name.clone()
+                    }
                 }
             },
             Expr::TemplateString(s) => {
@@ -270,8 +280,13 @@ impl Transpiler {
                 let items_code: Vec<String> = items.iter().map(|i| self.transpile_expr_string(i)).collect();
                 format!("Value::Array(vec![{}])", items_code.join(", "))
             }
-            Expr::Map(_pairs) => {
-                 "Value::Null /* Map todo */".to_string()
+            Expr::Map(entries) => {
+                 let mut inserts = Vec::new();
+                 for (key, val) in entries {
+                      let val_code = self.transpile_expr_string(val);
+                      inserts.push(format!("map.insert(\"{}\".to_string(), {});", key, val_code));
+                 }
+                 format!("Value::Map({{ let mut map = HashMap::new(); {} map }})", inserts.join(" "))
             },
             Expr::Binary { left, op, right } => {
                 let l = self.transpile_expr_string(left);
@@ -350,13 +365,21 @@ impl Transpiler {
                        "abs" => return format!("{}.abs()?", self.transpile_expr_string(&args[0])),
                        "floor" => return format!("{}.floor()?", self.transpile_expr_string(&args[0])),
                        "ceil" => return format!("{}.ceil()?", self.transpile_expr_string(&args[0])),
-                       _ => {}
+                       "round" => return format!("{}.round()?", self.transpile_expr_string(&args[0])),
+                       _ => {} // Fallback to generic call
                    }
                 }
                 
+                // Generic call
                 let callee_code = self.transpile_expr_string(callee);
-                let args_code = args.iter().map(|a| self.transpile_expr_string(a)).collect::<Vec<_>>().join(", ");
-                format!("{}({})?", callee_code, args_code)
+                let args_code_vec: Vec<String> = args.iter().map(|a| self.transpile_expr_string(a)).collect();
+                let args_code = if args_code_vec.is_empty() {
+                    "vec![]".to_string()
+                } else {
+                    format!("vec![{}]", args_code_vec.join(", "))
+                };
+                
+                format!("{}.call({})?", callee_code, args_code)
             }
             Expr::MethodCall { object, method, args } => {
                 let obj_code = self.transpile_expr_string(object);

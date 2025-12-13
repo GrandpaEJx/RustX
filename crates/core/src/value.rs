@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::fmt;
 
+use std::sync::Arc;
+
 /// Runtime value types
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone)]
 pub enum Value {
     Null,
     Int(i64),
@@ -15,7 +17,41 @@ pub enum Value {
         params: Vec<String>,
         body: crate::ast::Expr,
     },
-    NativeFunction(fn(Vec<Value>) -> Result<Value, String>),
+    NativeFunction(Arc<dyn Fn(Vec<Value>) -> Result<Value, String> + Send + Sync>),
+}
+
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+             // For simplicity, delegate to Display or standard debug where possible
+             Value::Null => write!(f, "Null"),
+             Value::Int(n) => write!(f, "Int({})", n),
+             Value::Float(n) => write!(f, "Float({})", n),
+             Value::Bool(b) => write!(f, "Bool({})", b),
+             Value::String(s) => write!(f, "String({:?})", s),
+             Value::Array(a) => write!(f, "Array({:?})", a),
+             Value::Map(m) => write!(f, "Map({:?})", m),
+             Value::Function { params, body: _ } => write!(f, "Function({:?})", params),
+             Value::NativeFunction(_) => write!(f, "NativeFunction"),
+        }
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Value::Null, Value::Null) => true,
+            (Value::Int(a), Value::Int(b)) => a == b,
+            (Value::Float(a), Value::Float(b)) => a == b,
+            (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::String(a), Value::String(b)) => a == b,
+            (Value::Array(a), Value::Array(b)) => a == b,
+            (Value::Map(a), Value::Map(b)) => a == b,
+            (Value::Function { params: pa, body: ba }, Value::Function { params: pb, body: bb }) => pa == pb && ba == bb,
+            (Value::NativeFunction(a), Value::NativeFunction(b)) => Arc::ptr_eq(a, b),
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -489,5 +525,12 @@ impl Value {
                  }
              }
         }
+    }
+    pub fn call(&self, args: Vec<Value>) -> Result<Value, String> {
+         match self {
+             Value::NativeFunction(f) => f(args),
+             Value::Function { .. } => Err("Cannot call interpreted function from compiled code".to_string()),
+             _ => Err(format!("Type {} is not callable", self.type_name())),
+         }
     }
 }
