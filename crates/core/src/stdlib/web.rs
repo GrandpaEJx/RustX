@@ -12,59 +12,92 @@ struct Route {
 
 struct AppConfig {
     routes: Vec<Route>,
+    host: String,
+    workers: usize,
+    debug: bool,
 }
 
-pub fn app(_args: Vec<Value>) -> Result<Value, String> {
+pub fn app(args: Vec<Value>) -> Result<Value, String> {
+    let mut host = "127.0.0.1".to_string();
+    let mut workers = 1;
+    let mut debug = false;
+
+    if !args.is_empty() {
+        if let Value::Map(m) = &args[0] {
+            if let Some(Value::String(h)) = m.get("host") { host = h.clone(); }
+            if let Some(Value::Int(w)) = m.get("workers") { workers = *w as usize; }
+            if let Some(Value::Bool(d)) = m.get("debug") { debug = *d; }
+        }
+    }
+
     let config = Arc::new(Mutex::new(AppConfig {
         routes: Vec::new(),
+        host,
+        workers,
+        debug,
     }));
     
     let mut map = HashMap::new();
     
-    // app.get(path, handler)
-    let config_clone = Arc::clone(&config);
-    map.insert("get".to_string(), Value::NativeFunction(Arc::new(move |args| {
-        if args.len() != 2 { return Err("app.get expects 2 arguments: path, handler".to_string()); }
-        let path = args[0].to_string();
-        let handler = args[1].clone();
-        
-        let mut cfg = config_clone.lock().map_err(|e| e.to_string())?;
-        cfg.routes.push(Route {
-            method: "GET".to_string(),
-            path,
-            handler,
-        });
-        Ok(Value::Null)
-    })));
+    // Helper to register methods
+    let register = |method: &str, map: &mut HashMap<String, Value>, config: Arc<Mutex<AppConfig>>| {
+        let method = method.to_string();
+        map.insert(method.to_lowercase(), Value::NativeFunction(Arc::new(move |args| {
+            if args.len() != 2 { return Err(format!("app.{} expects 2 arguments: path, handler", method.to_lowercase())); }
+            let path = args[0].to_string();
+            let handler = args[1].clone();
+            
+            let mut cfg = config.lock().map_err(|e| e.to_string())?;
+            cfg.routes.push(Route {
+                method: method.clone(),
+                path,
+                handler,
+            });
+            Ok(Value::Null)
+        })));
+    };
+
+    register("GET", &mut map, Arc::clone(&config));
+    register("POST", &mut map, Arc::clone(&config));
+    register("PUT", &mut map, Arc::clone(&config));
+    register("DELETE", &mut map, Arc::clone(&config));
+    register("PATCH", &mut map, Arc::clone(&config));
+    register("HEAD", &mut map, Arc::clone(&config));
+    register("OPTIONS", &mut map, Arc::clone(&config));
     
-    // app.post(path, handler)
-    let config_clone = Arc::clone(&config);
-    map.insert("post".to_string(), Value::NativeFunction(Arc::new(move |args| {
-        if args.len() != 2 { return Err("app.post expects 2 arguments: path, handler".to_string()); }
-        let path = args[0].to_string();
-        let handler = args[1].clone();
-        
-        let mut cfg = config_clone.lock().map_err(|e| e.to_string())?;
-        cfg.routes.push(Route {
-             method: "POST".to_string(),
-             path,
-             handler,
-        });
-        Ok(Value::Null)
-    })));
-    
-    // app.listen(port)
+    // app.listen(port, options?)
     let config_clone = Arc::clone(&config);
     map.insert("listen".to_string(), Value::NativeFunction(Arc::new(move |args| {
-        if args.len() != 1 { return Err("app.listen expects 1 argument: port".to_string()); }
+        if args.len() < 1 || args.len() > 3 { 
+            return Err("app.listen expects 1, 2, or 3 arguments: port, [options] OR [debug, workers]".to_string()); 
+        }
+        
         let port = args[0].as_int()? as u16;
         
-        let routes = {
+        let (mut host, mut workers, mut debug, routes) = {
             let cfg = config_clone.lock().map_err(|e| e.to_string())?;
-            cfg.routes.clone()
+            (cfg.host.clone(), cfg.workers, cfg.debug, cfg.routes.clone())
         };
+
+        if args.len() == 2 {
+            match &args[1] {
+                Value::Map(m) => {
+                     if let Some(Value::String(h)) = m.get("host") { host = h.clone(); }
+                     if let Some(Value::Int(w)) = m.get("workers") { workers = *w as usize; }
+                     if let Some(Value::Bool(d)) = m.get("debug") { debug = *d; }
+                },
+                Value::Bool(d) => { debug = *d; },
+                _ => return Err("app.listen: Second argument must be an options map or debug boolean".to_string()),
+            }
+        } else if args.len() == 3 {
+             if let Value::Bool(d) = &args[1] { debug = *d; }
+             else { return Err("app.listen: Second argument (debug) must be boolean".to_string()); }
+             
+             if let Value::Int(w) = &args[2] { workers = *w as usize; }
+             else { return Err("app.listen: Third argument (workers) must be integer".to_string()); }
+        }
         
-        println!("Server starting on port {}", port);
+        println!("Server starting on {}:{} with {} workers (debug={})", host, port, workers, debug);
         
         // Start Actix System
         actix_web::rt::System::new().block_on(async move {
@@ -74,19 +107,17 @@ pub fn app(_args: Vec<Value>) -> Result<Value, String> {
                 for route in &routes {
                     let handler_val = route.handler.clone();
                     let route_method = route.method.clone();
+                    // Capturing debug for logging if needed
+                    let debug_val = debug;
                     
                     let actix_handler = move |req_body: String| {
                         let h = handler_val.clone();
                          async move {
                             let mut args = Vec::new();
-                            // Pass body directly for simplicity
                              args.push(Value::String(req_body));
+                             // Pass debug flag as second argument
+                             args.push(Value::Bool(debug_val));
 
-                            // Use .call helper or manual match (since strict type usage inside interpreter crate)
-                            // But web.rs is inside core, so it has access to Value::call if pub?
-                            // Checked value.rs: call is pub.
-                            // BUT call returns Result.
-                            
                             let result = h.call(args);
                             
                             match result {
@@ -105,15 +136,22 @@ pub fn app(_args: Vec<Value>) -> Result<Value, String> {
                         }
                     };
                     
-                    if route_method == "GET" {
-                         app = app.route(&route.path, web::get().to(actix_handler));
-                    } else if route_method == "POST" {
-                         app = app.route(&route.path, web::post().to(actix_handler));
-                    }
+                    let actix_route = match route_method.as_str() {
+                        "GET" => web::get(),
+                        "POST" => web::post(),
+                        "PUT" => web::put(),
+                        "DELETE" => web::delete(),
+                        "PATCH" => web::patch(),
+                        "HEAD" => web::head(),
+                         _ => web::get(), // Default/Fallback
+                    };
+
+                    app = app.route(&route.path, actix_route.to(actix_handler));
                 }
                 app
             })
-            .bind(("127.0.0.1", port)).unwrap() // Unwrap for V1 simplicity
+            .workers(workers)
+            .bind((host, port)).unwrap() 
             .run()
             .await
         }).map_err(|e| e.to_string())?;
