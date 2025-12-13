@@ -8,6 +8,7 @@ pub enum RuntimeError {
     ArgumentError(String),
     IOError(String),
     ImportError(String),
+    FeatureNotSupported(String),
     Generic(String),
 }
 
@@ -34,6 +35,9 @@ impl fmt::Display for RuntimeError {
             }
             RuntimeError::Generic(msg) => {
                 write!(f, "RuntimeError: {}", msg)
+            }
+            RuntimeError::FeatureNotSupported(msg) => {
+                write!(f, "FeatureNotSupported: {}", msg)
             }
         }
     }

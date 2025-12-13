@@ -12,6 +12,8 @@ pub fn parse_statement(parser: &mut Parser) -> Result<Stmt, String> {
         Token::While => parse_while(parser),
         Token::For => parse_for(parser),
         Token::Import => parse_import(parser),
+        Token::Use => parse_use(parser),
+        Token::Rust => parse_rust_block(parser),
         _ => {
             // Try to parse as assignment or expression
             let expr = parser.parse_expression()?;
@@ -134,4 +136,155 @@ fn parse_import(parser: &mut Parser) -> Result<Stmt, String> {
     };
 
     Ok(Stmt::Import { path, alias })
+}
+
+/// Parses a use statement (e.g., use crate "rand" = "0.8")
+fn parse_use(parser: &mut Parser) -> Result<Stmt, String> {
+    parser.advance(); // consume 'use'
+    
+    parser.expect(Token::Crate)?; // consume 'crate'
+    
+    let crate_name = match parser.current_token() {
+        Token::String(s) => s.clone(),
+        _ => return Err("Expected crate name string".to_string()),
+    };
+    parser.advance();
+    
+    parser.expect(Token::Eq)?;
+    
+    let version = match parser.current_token() {
+        Token::String(s) => s.clone(),
+        _ => return Err("Expected version string".to_string()),
+    };
+    parser.advance();
+
+    let alias = if matches!(parser.current_token(), Token::As) {
+        parser.advance();
+        match parser.current_token() {
+            Token::Ident(name) => {
+                let alias_name = name.clone();
+                parser.advance();
+                Some(alias_name)
+            }
+            _ => return Err("Expected alias name".to_string()),
+        }
+    } else {
+        None
+    };
+
+    Ok(Stmt::RustImport { crate_name, version, alias })
+}
+
+/// Parses a rust block
+fn parse_rust_block(parser: &mut Parser) -> Result<Stmt, String> {
+    parser.advance(); // consume 'rust'
+    
+    parser.expect(Token::LBrace)?;
+    
+    // For now, we'll just consume tokens until RBrace and reconstruct the string.
+    // Ideally, the lexer would support a raw string mode or we capture the span.
+    // Since we don't have spans easily accessible here without bigger refactor,
+    // we will rely on a simpler approach: 
+    // Just expect a string literal containing the code? 
+    // No, users want `rust { code }`.
+    // The lexer will tokenize the inside of the block.
+    // We need to reconstruct the source code.
+    // This is tricky without source spans.
+    // Alternative: Lexer supports `RawBlock`?
+    // OR: We just parse a string literal: `rust "code"`?
+    // User requested `rust { ... }`.
+    // If we support `rust { ... }`, the lexer will tokenize the content.
+    // Reconstructing it is lossy (whitespace lost).
+    // WORKAROUND: For this iteration, we will require the code to be a string or template string?
+    // No, the plan said `rust { ... }`.
+    // Let's assume for now we can't easily reconstruct without spans.
+    // Hack: We will consume tokens until matching brace and join them with spaces.
+    // This is not perfect but functional for MVP.
+    
+    let mut code = String::new();
+    let mut brace_count = 1;
+    
+    while brace_count > 0 {
+        match parser.current_token() {
+            Token::LBrace => {
+                brace_count += 1;
+                code.push_str(" { ");
+                parser.advance();
+            }
+            Token::RBrace => {
+                brace_count -= 1;
+                if brace_count > 0 {
+                    code.push_str(" } ");
+                    parser.advance();
+                }
+            }
+            Token::Eof => return Err("Unterminated rust block".to_string()),
+            token => {
+                // Approximate reconstruction
+                let s = token_to_string(token);
+                code.push_str(&s);
+                code.push(' ');
+                parser.advance();
+            }
+        }
+    }
+    
+    parser.advance(); // consume final RBrace
+    
+    Ok(Stmt::RustBlock { code })
+}
+
+fn token_to_string(token: &Token) -> String {
+    match token {
+        Token::Int(n) => n.to_string(),
+        Token::Float(f) => f.to_string(),
+        Token::String(s) => format!("\"{}\"", s), // Quote strings
+        Token::TemplateString(s) => format!("`{}`", s),
+        Token::Bool(b) => b.to_string(),
+        Token::Ident(s) => s.clone(),
+        Token::Fn => "fn".to_string(),
+        Token::If => "if".to_string(),
+        Token::Else => "else".to_string(),
+        Token::While => "while".to_string(),
+        Token::For => "for".to_string(),
+        Token::In => "in".to_string(),
+        Token::Return => "return".to_string(),
+        Token::Import => "import".to_string(),
+        Token::Use => "use".to_string(),
+        Token::Crate => "crate".to_string(),
+        Token::Rust => "rust".to_string(),
+        Token::As => "as".to_string(),
+        Token::Plus => "+".to_string(),
+        Token::Minus => "-".to_string(),
+        Token::Star => "*".to_string(),
+        Token::Slash => "/".to_string(),
+        Token::Percent => "%".to_string(),
+        Token::Eq => "=".to_string(),
+        Token::EqEq => "==".to_string(),
+        Token::NotEq => "!=".to_string(),
+        Token::Lt => "<".to_string(),
+        Token::Gt => ">".to_string(),
+        Token::LtEq => "<=".to_string(),
+        Token::GtEq => ">=".to_string(),
+        Token::And => "&&".to_string(),
+        Token::Or => "||".to_string(),
+        Token::Not => "!".to_string(),
+        Token::Arrow => "=>".to_string(),
+        Token::ThinArrow => "->".to_string(),
+        Token::DoubleColon => "::".to_string(),
+        Token::Hash => "#".to_string(),
+        Token::Question => "?".to_string(),
+        Token::LParen => "(".to_string(),
+        Token::RParen => ")".to_string(),
+        Token::LBrace => "{".to_string(),
+        Token::RBrace => "}".to_string(),
+        Token::LBracket => "[".to_string(),
+        Token::RBracket => "]".to_string(),
+        Token::Comma => ",".to_string(),
+        Token::Colon => ":".to_string(),
+        Token::Semicolon => ";".to_string(),
+        Token::Dot => ".".to_string(),
+        Token::Newline => "\n".to_string(),
+        Token::Eof => "".to_string(),
+    }
 }

@@ -104,6 +104,9 @@ impl Interpreter {
                 }
                 Ok(Value::Null)
             }
+            Stmt::RustImport { .. } | Stmt::RustBlock { .. } => {
+                Err(RuntimeError::FeatureNotSupported("Rust imports and blocks require JIT compilation. This feature is not available in pure interpreter mode.".to_string()))
+            }
         }
     }
 }

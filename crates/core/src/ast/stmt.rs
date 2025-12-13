@@ -40,4 +40,12 @@ pub enum Stmt {
         path: String,
         alias: Option<String>,
     },
+    RustImport {
+        crate_name: String,
+        version: String,
+        alias: Option<String>,
+    },
+    RustBlock {
+        code: String,
+    },
 }

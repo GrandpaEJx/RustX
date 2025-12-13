@@ -18,6 +18,9 @@ pub enum Token {
     In,
     Return,
     Import,
+    Use,
+    Crate,
+    Rust,
     As,
     
     // Operators
@@ -37,6 +40,10 @@ pub enum Token {
     Or,
     Not,
     Arrow, // =>
+    ThinArrow, // ->
+    DoubleColon, // ::
+    Hash, // #
+    Question, // ?
     
     // Delimiters
     LParen,
@@ -67,6 +74,9 @@ impl Token {
             "in" => Some(Token::In),
             "return" => Some(Token::Return),
             "import" => Some(Token::Import),
+            "use" => Some(Token::Use),
+            "crate" => Some(Token::Crate),
+            "rust" => Some(Token::Rust),
             "as" => Some(Token::As),
             "true" => Some(Token::Bool(true)),
             "false" => Some(Token::Bool(false)),

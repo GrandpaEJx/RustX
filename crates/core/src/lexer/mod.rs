@@ -80,7 +80,14 @@ impl<'a> Lexer<'a> {
                 // Operators and delimiters
                 let token = match ch {
                     '+' => Token::Plus,
-                    '-' => Token::Minus,
+                    '-' => {
+                         if let Some(&'>') = self.peek() {
+                             self.advance();
+                             self.advance();
+                             return Ok(Token::ThinArrow);
+                         }
+                         Token::Minus
+                    }
                     '*' => Token::Star,
                     '/' => Token::Slash,
                     '%' => Token::Percent,
@@ -91,7 +98,14 @@ impl<'a> Lexer<'a> {
                     '[' => Token::LBracket,
                     ']' => Token::RBracket,
                     ',' => Token::Comma,
-                    ':' => Token::Colon,
+                    ':' => {
+                         if let Some(&':') = self.peek() {
+                             self.advance();
+                             self.advance();
+                             return Ok(Token::DoubleColon);
+                         }
+                         Token::Colon
+                    }
                     ';' => Token::Semicolon,
                     '.' => Token::Dot,
                     '!' => {
@@ -148,6 +162,8 @@ impl<'a> Lexer<'a> {
                         }
                         return Err(format!("Unexpected character: {}", ch));
                     }
+                    '#' => Token::Hash,
+                    '?' => Token::Question,
                     _ => return Err(format!("Unexpected character: {}", ch)),
                 };
 
