@@ -115,7 +115,7 @@ fn add(a, b) => a + b  // Arrow function
 
 ### Control Flow
 
-```rustx
+````rustx
 // If expression
 result = if age >= 18 { "Adult" } else { "Minor" }
 
@@ -127,7 +127,24 @@ for i in range(5) {
 while x < 10 {
     x = x + 1
 }
-```
+
+### Crate Imports & Embedded Rust <0.3.0>
+
+You can import Rust crates and even write raw Rust code directly in your RustX scripts!
+
+```rustx
+use crate "rand" = "0.8"
+
+rust {
+    // This is raw Rust code!
+    fn get_random() -> Result<Value, String> {
+        let n: i64 = rand::random::<u8>() as i64;
+        Ok(Value::Int(n))
+    }
+}
+
+print("Random:", get_random())
+````
 
 ## Built-in Functions
 
@@ -166,6 +183,8 @@ Check out the `examples/` directory:
 - `template_strings.rsx` - Template string interpolation
 - `method_chaining.rsx` - Method chaining with dot operator
 - `string_math.rsx` - String and math functions
+- `rust_imports.rsx` - Importing crates and embedding Rust
+- `web_server.rsx` - Running an Actix-web server
 
 ## Project Structure
 
@@ -185,7 +204,7 @@ RustX/
 A: The interpreter is generally slower than CPython, but the **compiler** (which compiles to native Rust) can be significantly faster, especially for loop-heavy code.
 
 **Q: Can I use crates.io libraries?**  
-A: Not directly in RustX scripts. However, you can use the `rx!` macro to embed RustX within a standard Rust project, where you have full access to crates.io.
+A: **Yes!** As of v0.3.0, you can use `use crate "name" = "version"` to import crates directly into your scripts. RustX detects this and JIT-compiles your script to a native Rust binary.
 
 **Q: Does RustX support classes/structs?**  
 A: Not yet. We support Maps and Functions for data structure and logic.
