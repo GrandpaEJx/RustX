@@ -144,7 +144,24 @@ impl Transpiler {
                  self.push_line("}");
             }
             Stmt::Import { .. } => {
-                self.push_line("// Import ignored");
+                self.push_line("// Import ignored in transpiler (handled by JIT/runtime)");
+            }
+            Stmt::RustImport { crate_name, alias, .. } => {
+                // We emit a use declaration. Note: This assumes the crate is available
+                // (which the CLI ensures via JIT compilation).
+                let safe_crate_name = crate_name.replace('-', "_");
+                if let Some(alias_name) = alias {
+                     self.push_line(&format!("use {} as {};", safe_crate_name, alias_name));
+                } else {
+                     self.push_line(&format!("use {};", safe_crate_name));
+                }
+            }
+            Stmt::RustBlock { code } => {
+                self.push_line("/* Embedded Rust Block */");
+                // Split lines to maintain indentation
+                for line in code.lines() {
+                     self.push_line(line.trim());
+                }
             }
         }
     }
@@ -156,7 +173,13 @@ impl Transpiler {
             Expr::String(s) => format!("Value::String(\"{}\".to_string())", s),
             Expr::Bool(b) => format!("Value::Bool({})", b),
             Expr::Null => "Value::Null".to_string(),
-            Expr::Ident(name) => format!("{}.clone()", name),
+            Expr::Ident(name) => {
+                if self.is_declared(name) {
+                    format!("{}.clone()", name)
+                } else {
+                    name.clone()
+                }
+            },
             Expr::TemplateString(s) => {
                 let mut format_str = String::new();
                  let mut args = Vec::new();
