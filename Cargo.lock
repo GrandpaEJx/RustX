@@ -282,7 +282,7 @@ dependencies = [
 
 [[package]]
 name = "rustx-lang"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "clap",
  "colored",
@@ -293,11 +293,11 @@ dependencies = [
 
 [[package]]
 name = "rustx_core"
-version = "0.2.0"
+version = "0.3.0"
 
 [[package]]
 name = "rustx_macros"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",

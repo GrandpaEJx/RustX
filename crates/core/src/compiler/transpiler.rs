@@ -21,7 +21,7 @@ impl Transpiler {
         self.code.clear();
         self.code.push_str("use rustx_core::value::Value;\n");
 
-        self.code.push_str("fn main() -> Result<(), String> {\n");
+        self.code.push_str("#[allow(unreachable_code)]\nfn main() -> Result<(), String> {\n");
         self.indent_level += 1;
         
         for stmt in stmts {
@@ -93,9 +93,9 @@ impl Transpiler {
                  // Let's stick to closure for now as it's most flexible for scripting.
                  
                  // Param names
-                 let params_str = params.iter().map(|p| p.as_str()).collect::<Vec<_>>().join(", ");
+                 let params_str = params.iter().map(|p| format!("{}: Value", p)).collect::<Vec<_>>().join(", ");
                  
-                 self.push_line(&format!("let {} = |{}| {{", name, params_str));
+                 self.push_line(&format!("let {} = |{}| -> Result<Value, String> {{", name, params_str));
                  self.indent_level += 1;
                  self.enter_scope();
                  for param in params {
@@ -165,7 +165,7 @@ impl Transpiler {
             Expr::String(s) => format!("Value::String(\"{}\".to_string())", s),
             Expr::Bool(b) => format!("Value::Bool({})", b),
             Expr::Null => "Value::Null".to_string(),
-            Expr::Ident(name) => name.clone(),
+            Expr::Ident(name) => format!("{}.clone()", name),
             Expr::TemplateString(s) => format!("Value::String(\"{}\".to_string())", s), // Todo: compile-time interpolation
             Expr::Array(items) => {
                 let items_code: Vec<String> = items.iter().map(|i| self.transpile_expr_string(i)).collect();
