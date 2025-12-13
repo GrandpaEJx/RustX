@@ -7,7 +7,19 @@
 - Rust 1.70 or higher
 - Cargo (comes with Rust)
 
+### Install from Crates.io (Recommended)
+
+The easiest way to install RustX:
+
+```bash
+cargo install rustx-lang
+```
+
+This will install the `rustx_lang` binary to your Cargo bin directory (usually `~/.cargo/bin`).
+
 ### Build from Source
+
+If you want the latest development version:
 
 ```bash
 git clone https://github.com/GrandpaEJx/RustX.git
@@ -16,6 +28,12 @@ cargo build --release
 ```
 
 The compiled binary will be at `target/release/rustx_lang`.
+
+### Verify Installation
+
+```bash
+rustx_lang --version
+```
 
 ## Your First RustX Script
 
@@ -29,6 +47,10 @@ print(`Hello, {name}!`)
 Run it:
 
 ```bash
+# If installed via cargo install
+rustx_lang hello.rsx
+
+# If built from source
 cargo run --bin rustx_lang -- hello.rsx
 ```
 

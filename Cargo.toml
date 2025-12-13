@@ -1,15 +1,20 @@
 [workspace]
+resolver = "2"
 members = [
     "crates/core",
     "crates/macros",
     "crates/cli",
 ]
-resolver = "2"
 
 [workspace.package]
-name = "rustx-lang"
 version = "0.2.0"
 edition = "2021"
-authors = ["Grandpa EJ <>"]
+authors = ["GrandpaEJx"]
 license = "MIT"
 repository = "https://github.com/GrandpaEJx/RustX"
+homepage = "https://github.com/GrandpaEJx/RustX"
+documentation = "https://github.com/GrandpaEJx/RustX/tree/main/docs"
+description = "A clean, minimal scripting language that seamlessly integrates with Rust"
+keywords = ["scripting", "language", "interpreter", "rust", "embedded"]
+categories = ["development-tools", "parser-implementations"]
+readme = "README.md"

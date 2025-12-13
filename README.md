@@ -7,16 +7,37 @@
 
 ## Quick Start
 
+### Install from Crates.io
+
 ```bash
-# Install
+cargo install rustx-lang
+```
+
+### Or Build from Source
+
+```bash
 git clone https://github.com/GrandpaEJx/RustX.git
 cd RustX
 cargo build --release
+```
 
-# Run a script
+### Run a Script
+
+```bash
+# If installed via cargo install
+rustx_lang examples/basic.rsx
+
+# If built from source
 cargo run --bin rustx_lang -- examples/basic.rsx
+```
 
-# Start REPL
+### Start REPL
+
+```bash
+# If installed via cargo install
+rustx_lang repl
+
+# If built from source
 cargo run --bin rustx_lang repl
 ```
 
