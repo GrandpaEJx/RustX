@@ -85,7 +85,7 @@
 
 - [ ] Complete parser module refactoring (split into stmt, expr, primary, helpers)
 - [ ] Complete lexer module refactoring (split into tokenize, helpers)
-- [ ] Add more built-in functions (len, push, pop, etc.)
+- [x] Add more built-in functions (len, push, pop, type) ✅
 - [ ] Implement error line numbers in error messages
 
 ### Medium Priority
