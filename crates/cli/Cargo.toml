@@ -14,3 +14,5 @@ path = "src/main.rs"
 rustx_core = { path = "../core" }
 rustx_macros = { path = "../macros" }
 clap = { version = "4.4", features = ["derive"] }
+rustyline = "13.0"
+colored = "2.1"
