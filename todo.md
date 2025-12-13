@@ -41,7 +41,7 @@
 - [x] Documentation - Beginner-friendly README
 - [x] Rust-style docs with `cargo doc`
 - [ ] Verify "Seamless" Experience with advanced macro features
-- [ ] Performance benchmarks
+- [x] Performance benchmarks
 
 ## Recent Accomplishments ✅
 
@@ -63,6 +63,13 @@
 - Implemented `rx!` and `rsx!` macros
 - Type conversion for i64, f64, String, bool
 - 6/6 integration tests passing
+
+### Compiler Integration
+
+- Implemented `Transpiler` to convert RustX to Rust
+- Added `build` command to CLI for expanding `cargo build`
+- 12x performance improvement in benchmarks (0.43s vs 5.06s)
+- Supports standalone binary generation
 
 ### Codebase Refactoring
 
@@ -90,6 +97,8 @@
 - [ ] Add math functions (abs, min, max, floor, ceil, round)
 - [ ] Add array functions (map, filter, reduce, reverse, sort)
 - [ ] Run all examples and verify output
+- [ ] Compiler: Support recursive functions
+- [ ] Compiler: Support template strings
 - [ ] Update FAQ in README with common questions
 
 ### Medium Priority
@@ -99,7 +108,7 @@
 - [ ] Context capture for macros (access Rust variables)
 - [ ] More comprehensive examples (file I/O, JSON parsing)
 - [ ] Add error line numbers in error messages
-- [ ] Performance benchmarks
+- [x] Performance benchmarks
 
 ### Low Priority
 
