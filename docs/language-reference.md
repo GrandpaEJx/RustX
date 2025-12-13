@@ -382,3 +382,15 @@ add = fn(a, b) => a + b
        if n <= 1 { 1 } else { n * factorial(n - 1) }
    }
    ```
+
+---
+
+## See Also
+
+- [Getting Started](getting-started.md) - Installation and setup
+- [Built-in Functions](built-in-functions.md) - Function reference
+- [Examples Guide](examples-guide.md) - Practical examples
+
+---
+
+**Navigation:** [📚 Docs Home](README.md) | [⬅️ Getting Started](getting-started.md) | [➡️ Built-in Functions](built-in-functions.md)

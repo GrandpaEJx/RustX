@@ -320,3 +320,15 @@ rounded_age = round(age)
 print(`User: {formatted_name}, Age: {rounded_age}`)
 // Output: User: alice smith, Age: 26
 ```
+
+---
+
+## See Also
+
+- [Language Reference](language-reference.md) - Complete syntax guide
+- [Getting Started](getting-started.md) - Installation and setup
+- [Examples Guide](examples-guide.md) - More practical examples
+
+---
+
+**Navigation:** [📚 Docs Home](README.md) | [⬅️ Language Reference](language-reference.md) | [➡️ Examples Guide](examples-guide.md)

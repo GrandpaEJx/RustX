@@ -114,3 +114,7 @@ cargo run --bin rustx_lang -- --ast --time --verbose script.rsx
 - [Built-in Functions](built-in-functions.md) - Explore available functions
 - [Examples Guide](examples-guide.md) - See practical examples
 - [Rust Integration](rust-integration.md) - Use RustX in Rust code
+
+---
+
+**Navigation:** [📚 Docs Home](README.md) | [⬅️ Main README](../README.md) | [➡️ Language Reference](language-reference.md)
