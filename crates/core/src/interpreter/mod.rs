@@ -13,7 +13,7 @@ use crate::value::Value;
 
 /// Interpreter for RustX
 pub struct Interpreter {
-    env: Environment,
+    pub env: Environment,
 }
 
 impl Interpreter {

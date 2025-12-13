@@ -100,3 +100,123 @@ pub fn rx(input: TokenStream) -> TokenStream {
 pub fn rsx(input: TokenStream) -> TokenStream {
     rx(input)
 }
+
+/// Evaluates RustX code with access to Rust variables
+/// 
+/// # Example
+/// ```ignore
+/// use rustx_macros::rx_with;
+/// 
+/// let x = 10;
+/// let y = 20;
+/// let result: i64 = rx_with! {
+///     vars: { x, y },
+///     code: "x + y * 2"
+/// };
+/// assert_eq!(result, 50);
+/// ```
+#[proc_macro]
+pub fn rx_with(input: TokenStream) -> TokenStream {
+    use syn::{parse::{Parse, ParseStream}, Ident, Token};
+    use syn::punctuated::Punctuated;
+    
+    struct RxWithInput {
+        vars: Vec<Ident>,
+        code: LitStr,
+    }
+    
+    impl Parse for RxWithInput {
+        fn parse(input: ParseStream) -> syn::Result<Self> {
+            // Parse "vars:"
+            input.parse::<Ident>()?; // "vars"
+            input.parse::<Token![:]>()?;
+            
+            // Parse variable list in braces
+            let content;
+            syn::braced!(content in input);
+            let vars: Punctuated<Ident, Token![,]> = content.parse_terminated(Ident::parse, Token![,])?;
+            let vars: Vec<Ident> = vars.into_iter().collect();
+            
+            input.parse::<Token![,]>()?;
+            
+            // Parse "code:"
+            input.parse::<Ident>()?; // "code"
+            input.parse::<Token![:]>()?;
+            
+            // Parse code string
+            let code: LitStr = input.parse()?;
+            
+            Ok(RxWithInput { vars, code })
+        }
+    }
+    
+    let rx_input = parse_macro_input!(input as RxWithInput);
+    let source_str = rx_input.code.value();
+    let var_idents = &rx_input.vars;
+    
+    // Generate variable conversion code (executed in outer scope)
+    let var_conversions = var_idents.iter().map(|var| {
+        let temp_name = syn::Ident::new(&format!("__rustx_var_{}", var), var.span());
+        quote! {
+            let #temp_name: Value = {
+                use rustx_core::Value;
+                // Try different type conversions
+                if let Ok(v) = TryInto::<i64>::try_into(#var) {
+                    Value::Int(v)
+                } else if let Ok(v) = TryInto::<f64>::try_into(#var) {
+                    Value::Float(v)
+                } else if let Ok(v) = TryInto::<bool>::try_into(#var) {
+                    Value::Bool(v)
+                } else {
+                    // Default: convert to string
+                    Value::String(format!("{:?}", #var))
+                }
+            };
+        }
+    });
+    
+    // Generate variable injection code (uses converted values)
+    let var_injections = var_idents.iter().map(|var| {
+        let temp_name = syn::Ident::new(&format!("__rustx_var_{}", var), var.span());
+        quote! {
+            interpreter.env.set(
+                stringify!(#var).to_string(),
+                #temp_name.clone()
+            );
+        }
+    });
+    
+    let expanded = quote! {
+        {
+            use rustx_core::{Interpreter, Lexer, Parser, Value};
+            
+            // Convert variables to RustX values in outer scope
+            #(#var_conversions)*
+            
+            let mut lexer = Lexer::new(#source_str);
+            let tokens = lexer.tokenize()
+                .expect("Failed to tokenize RustX code");
+            let mut parser = Parser::new(tokens);
+            let ast = parser.parse()
+                .expect("Failed to parse RustX code");
+            let mut interpreter = Interpreter::new();
+            
+            // Inject variables
+            #(#var_injections)*
+            
+            let result_value = interpreter.eval_program(ast)
+                .expect("Failed to execute RustX code");
+            
+            // Convert result based on expected type
+            match result_value {
+                Value::Int(n) => n as _,
+                Value::Float(f) => f as _,
+                Value::String(s) => s as _,
+                Value::Bool(b) => b as _,
+                _ => panic!("Cannot convert result value"),
+            }
+        }
+    };
+    
+    TokenStream::from(expanded)
+}
