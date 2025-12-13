@@ -96,11 +96,23 @@ impl Interpreter {
                 Ok(last_value)
             }
             Stmt::Import { path, alias } => {
-                let module = self.eval_import_file(&path)?;
+                // Check if this is a stdlib module import
+                let stdlib_modules = ["web", "json", "http", "os", "time"];
+                
+                let module = if stdlib_modules.contains(&path.as_str()) {
+                    // Load stdlib module from environment
+                    self.env.get(&path).map_err(|_| {
+                        RuntimeError::ImportError(format!("Stdlib module '{}' not found", path))
+                    })?
+                } else {
+                    // Load from file
+                    self.eval_import_file(&path)?
+                };
+                
                 if let Some(name) = alias {
                     self.env.set(name, module);
                 } else {
-                    return Err(RuntimeError::ImportError("Import statement currently requires an alias (e.g., import \"file.rsx\" as name)".to_string()));
+                    return Err(RuntimeError::ImportError("File imports require an alias (e.g., import \"file.rsx\" as name)".to_string()));
                 }
                 Ok(Value::Null)
             }

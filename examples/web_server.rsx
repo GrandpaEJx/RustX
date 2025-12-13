@@ -2,19 +2,16 @@ rust {
     // Force JIT
 }
 
-let debug = false
+import web
+import time
+import json
 
-if debug {
-    print("🚀 Starting RustX Web Server...")
-}
+let debug = false
 
 let app = web.app()
 
 // Home Route
 fn home(body, debug) {
-    if debug {
-        print("[GET] / request received")
-    }
     let response = {
         "name": "RustX API",
         "version": "1.0.0",
@@ -30,9 +27,6 @@ fn home(body, debug) {
 
 // Time Route
 fn current_time(body, debug) {
-    if debug {
-        print("[GET] /time request received")
-    }
     let now = time.now()
     return web.json({
         "timestamp": now
@@ -41,9 +35,6 @@ fn current_time(body, debug) {
 
 // Echo Route
 fn echo(body, debug) {
-    if debug {
-        print("[POST] /echo request received")
-    }
     return web.json({
         "your_data": body
     })
@@ -52,9 +43,6 @@ fn echo(body, debug) {
 // Calc Route (Add) - parses JSON body
 // Body: {"a": 10, "b": 20}
 fn add(body, debug) {
-    if debug {
-        print("[POST] /add request received")
-    }
     let input = json.parse(body) 
     
     let a = input["a"]
@@ -74,6 +62,6 @@ app.post("/echo", echo)
 app.post("/add", add)
 
 let port = 8080
-let workers = 8
+let workers = 1
 print("Server listening on http://localhost:", port)
 app.listen(port, debug, workers)

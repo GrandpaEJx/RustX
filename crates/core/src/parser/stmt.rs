@@ -133,24 +133,34 @@ fn parse_for(parser: &mut Parser) -> Result<Stmt, String> {
 fn parse_import(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance(); // consume 'import'
     
-    let path = match parser.current_token() {
-        Token::String(s) => s.clone(),
-        _ => return Err("Expected import path string".to_string()),
-    };
-    parser.advance();
-
-    let alias = if matches!(parser.current_token(), Token::As) {
-        parser.advance();
-        match parser.current_token() {
-            Token::Ident(name) => {
-                let alias_name = name.clone();
+    let (path, alias) = match parser.current_token() {
+        // import "file.rsx" as module
+        Token::String(s) => {
+            let path = s.clone();
+            parser.advance();
+            
+            let alias = if matches!(parser.current_token(), Token::As) {
                 parser.advance();
-                Some(alias_name)
-            }
-            _ => return Err("Expected alias name".to_string()),
+                match parser.current_token() {
+                    Token::Ident(name) => {
+                        let alias_name = name.clone();
+                        parser.advance();
+                        Some(alias_name)
+                    }
+                    _ => return Err("Expected alias name".to_string()),
+                }
+            } else {
+                None
+            };
+            (path, alias)
         }
-    } else {
-        None
+        // import web (stdlib module)
+        Token::Ident(name) => {
+            let module_name = name.clone();
+            parser.advance();
+            (module_name.clone(), Some(module_name))
+        }
+        _ => return Err("Expected import path (string or identifier)".to_string()),
     };
 
     Ok(Stmt::Import { path, alias })
