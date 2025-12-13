@@ -56,6 +56,21 @@ age = 25
 print(`My name is {name} and I'm {age} years old`)
 ```
 
+### Method Chaining
+
+```rustx
+// String methods
+"hello world".upper()              // HELLO WORLD
+"  trim me  ".trim().lower()       // trim me
+
+// Array methods
+[1, 2, 3].len()                    // 3
+
+// Math methods
+3.14.round()                       // 3
+(-42).abs()                        // 42
+```
+
 ### Functions
 
 ```rustx
@@ -117,6 +132,7 @@ Check out the `examples/` directory:
 - `loops.rsx` - For and while loops
 - `recursion.rsx` - Recursive functions
 - `template_strings.rsx` - Template string interpolation
+- `method_chaining.rsx` - Method chaining with dot operator
 - `string_math.rsx` - String and math functions
 
 ## Project Structure

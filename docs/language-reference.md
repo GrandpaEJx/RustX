@@ -290,6 +290,80 @@ print(`Welcome, {name}!`)
 
 **Note:** Currently only variable names are supported inside `{}`, not expressions.
 
+## Method Chaining
+
+RustX supports method chaining using the dot operator, allowing for more fluent and readable code:
+
+### String Methods
+
+```rustx
+text = "hello world"
+upper_text = text.upper()           // "HELLO WORLD"
+lower_text = text.lower()           // "hello world"
+
+// Chaining multiple methods
+clean = "  MESSY  ".trim().lower()  // "messy"
+
+// Split with chaining
+words = "a,b,c".split(",")          // ["a", "b", "c"]
+```
+
+### Array Methods
+
+```rustx
+numbers = [1, 2, 3, 4, 5]
+size = numbers.len()                // 5
+
+// Direct on literals
+count = [10, 20, 30].len()          // 3
+```
+
+### Math Methods
+
+```rustx
+pi = 3.14159
+rounded = pi.round()                // 3
+floored = pi.floor()                // 3
+ceiled = pi.ceil()                  // 4
+
+negative = -42
+positive = negative.abs()           // 42
+```
+
+### Complex Chaining
+
+You can chain multiple methods together:
+
+```rustx
+// Process CSV data
+data = "  Apple,Banana,Cherry  "
+processed = data.trim().lower().split(",")
+// Result: ["apple", "banana", "cherry"]
+
+// String manipulation
+result = "hello".upper().len()      // 5
+```
+
+### Available Methods
+
+**String Methods:**
+
+- `.upper()` - Convert to uppercase
+- `.lower()` - Convert to lowercase
+- `.trim()` - Remove whitespace from both ends
+- `.split(delimiter)` - Split into array
+
+**Collection Methods:**
+
+- `.len()` - Get length (works on strings, arrays, maps)
+
+**Number Methods:**
+
+- `.abs()` - Absolute value
+- `.floor()` - Round down
+- `.ceil()` - Round up
+- `.round()` - Round to nearest integer
+
 ## Comments
 
 ### Single-line Comments
