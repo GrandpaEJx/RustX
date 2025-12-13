@@ -5,6 +5,7 @@ Performance benchmarks for the RustX language interpreter.
 ## Running Benchmarks
 
 ### Quick Benchmark
+
 ```bash
 ./benchmarks/run_benchmarks.sh
 ```
@@ -12,6 +13,7 @@ Performance benchmarks for the RustX language interpreter.
 This will automatically run all benchmarks and update this README with the results.
 
 ### Individual Benchmarks
+
 ```bash
 # Fibonacci (recursion)
 time rustx_lang benchmarks/fibonacci.rsx
@@ -37,40 +39,42 @@ time rustx_lang benchmarks/method_chaining.rsx
 - `loops.rsx` - Loop iteration performance (100K+ iterations)
 - `method_chaining.rsx` - Method chaining overhead (30K ops)
 
-## Latest Results
+## Web Server Performance (v0.3.0)
+
+**Last Updated:** 2025-12-13 21:13:00
+
+Benchmarks run on 8-core CPU using `wrk` (100 connections, 10s).
+
+| Mode         | Requests/Sec | Optimization            |
+| ------------ | ------------ | ----------------------- |
+| **JIT**      | **158,547**  | `--release` + LTO       |
+| **Compiler** | **150,932**  | `codegen-units=1` + LTO |
+
+> Both modes now utilize `release` profile and LTO, achieving native-level performance.
+
+## Latest Interpreter Results
 
 **Last Updated:** 2025-12-13 08:50:39
 
-| Benchmark | Time | Description |
-|-----------|------|-------------|
-| Fibonacci(20-30) | 12391ms | Recursive function calls |
-| String Operations | 62ms | 30K string manipulations |
-| Array Operations | 93ms | 11K array operations |
-| Loop Performance | 208ms | 100K+ loop iterations |
-| Method Chaining | 74ms | 30K method chain calls |
+| Benchmark         | Time    | Description              |
+| ----------------- | ------- | ------------------------ |
+| Fibonacci(20-30)  | 12391ms | Recursive function calls |
+| String Operations | 62ms    | 30K string manipulations |
+| Array Operations  | 93ms    | 11K array operations     |
+| Loop Performance  | 208ms   | 100K+ loop iterations    |
+| Method Chaining   | 74ms    | 30K method chain calls   |
 
 ## Interpreting Results
 
-RustX is a tree-walking interpreter, so performance is expected to be:
-- **Faster than:** Pure Python, Ruby
-- **Slower than:** Compiled languages (Rust, C, Go)
-- **Similar to:** Lua, JavaScript (non-JIT)
+RustX supports both interpreted execution and JIT/AOT compilation.
 
-The focus is on **simplicity** and **ease of integration** rather than raw speed.
-
-## Performance Tips
-
-1. **Minimize function calls** - Function calls have overhead
-2. **Use built-in functions** - They're implemented in Rust
-3. **Avoid deep recursion** - Use loops when possible
-4. **Cache results** - Store computed values in variables
-5. **Method chaining is efficient** - No extra overhead vs separate calls
+- **Interpreter**: Good for scripting, similar to Lua/Python.
+- **JIT/Compiler**: Excellent for high-performance apps (web servers), comparable to Go/Rust.
 
 ## System Information
 
-Results will vary based on your system. These benchmarks were run on:
-- CPU: Your system's CPU
-- OS: Your operating system
-- RustX Version: 0.2.0
+- RustX Version: 0.3.0
+- Optimization: Release + LTO enabled by default for JIT/Compiler modes.
 
-Run `./benchmarks/run_benchmarks.sh` to get results for your system!
+Run `./benchmarks/run_benchmarks.sh` for interpreter benchmarks.
+Run `./benchmarks/compare_modes.sh` for JIT vs Compiler web server benchmarks.
