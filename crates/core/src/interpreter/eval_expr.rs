@@ -94,10 +94,14 @@ impl Interpreter {
     pub(super) fn eval_call(&mut self, callee: Expr, args: Vec<Expr>) -> Result<Value, String> {
         // Check for built-in functions first
         if let Expr::Ident(name) = &callee {
-            if name == "range" {
-                return self.builtin_range(args);
-            } else if name == "print" {
-                return self.builtin_print(args);
+            match name.as_str() {
+                "range" => return self.builtin_range(args),
+                "print" => return self.builtin_print(args),
+                "len" => return self.builtin_len(args),
+                "type" => return self.builtin_type(args),
+                "push" => return self.builtin_push(args),
+                "pop" => return self.builtin_pop(args),
+                _ => {}
             }
         }
 

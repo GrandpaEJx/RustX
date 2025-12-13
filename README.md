@@ -8,7 +8,7 @@ A clean, minimal scripting language that seamlessly integrates with Rust.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/RustX.git
+git clone https://github.com/GrandpaEJx/RustX.git
 cd RustX
 
 # Build the project
