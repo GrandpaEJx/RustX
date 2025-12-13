@@ -81,19 +81,25 @@
 
 ## Next Steps
 
-### High Priority
+### High Priority (Do Now)
 
-- [ ] Complete parser module refactoring (split into stmt, expr, primary, helpers)
-- [ ] Complete lexer module refactoring (split into tokenize, helpers)
+- [/] Complete parser module refactoring (1/5 files done)
+- [ ] Complete lexer module refactoring
 - [x] Add more built-in functions (len, push, pop, type) ✅
-- [ ] Implement error line numbers in error messages
+- [ ] Add string manipulation functions (split, join, trim, upper, lower)
+- [ ] Add math functions (abs, min, max, floor, ceil, round)
+- [ ] Add array functions (map, filter, reduce, reverse, sort)
+- [ ] Run all examples and verify output
+- [ ] Update FAQ in README with common questions
 
 ### Medium Priority
 
 - [ ] Import system for `.rsl` files
 - [ ] Standard library (string, math, array functions)
 - [ ] Context capture for macros (access Rust variables)
-- [ ] More comprehensive examples
+- [ ] More comprehensive examples (file I/O, JSON parsing)
+- [ ] Add error line numbers in error messages
+- [ ] Performance benchmarks
 
 ### Low Priority
 
@@ -101,3 +107,4 @@
 - [ ] REPL improvements (syntax highlighting, autocomplete)
 - [ ] VSCode extension for syntax highlighting
 - [ ] Online playground
+- [ ] Package manager for RustX libraries
