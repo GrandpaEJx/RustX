@@ -23,11 +23,13 @@ impl Interpreter {
                 Ok(func)
             }
             Stmt::Return(expr) => {
-                if let Some(e) = expr {
-                    self.eval_expr(e)
+                let val = if let Some(e) = expr {
+                    self.eval_expr(e)?
                 } else {
-                    Ok(Value::Null)
-                }
+                    Value::Null
+                };
+                self.is_returning = true;
+                Ok(val)
             }
             Stmt::While { condition, body } => {
                 let mut last_value = Value::Null;
@@ -38,6 +40,9 @@ impl Interpreter {
                         Expr::Block(stmts) => {
                             for stmt in stmts {
                                 last_value = self.eval_stmt(stmt.clone())?;
+                                if self.is_returning {
+                                    return Ok(last_value);
+                                }
                             }
                         }
                         _ => {
@@ -66,6 +71,9 @@ impl Interpreter {
                                     self.env.set(iterator.clone(), item);
                                     for stmt in stmts {
                                         last_value = self.eval_stmt(stmt.clone())?;
+                                        if self.is_returning {
+                                            break;
+                                        }
                                     }
                                     self.env.pop_scope();
                                 }
@@ -76,6 +84,9 @@ impl Interpreter {
                                     last_value = self.eval_expr(*body.clone())?;
                                     self.env.pop_scope();
                                 }
+                            }
+                            if self.is_returning {
+                                break;
                             }
                         }
                     }

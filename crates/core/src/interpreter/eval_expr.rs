@@ -151,6 +151,9 @@ impl Interpreter {
 
                 for stmt in statements {
                     last_value = self.eval_stmt(stmt)?;
+                    if self.is_returning {
+                        break;
+                    }
                 }
 
                 self.env.pop_scope();
@@ -237,6 +240,10 @@ impl Interpreter {
                 }
 
                 let result = self.eval_expr(body)?;
+                // Verify return state is consumed here
+                if self.is_returning {
+                    self.is_returning = false;
+                }
                 self.env.pop_scope();
 
                 Ok(result)

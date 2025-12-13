@@ -14,6 +14,7 @@ use crate::value::Value;
 /// Interpreter for RustX
 pub struct Interpreter {
     pub env: Environment,
+    pub is_returning: bool,
 }
 
 impl Interpreter {
@@ -21,6 +22,7 @@ impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
             env: Environment::new(),
+            is_returning: false,
         };
         interpreter.init_builtins();
         interpreter
@@ -38,6 +40,9 @@ impl Interpreter {
 
         for stmt in statements {
             last_value = self.eval_stmt(stmt)?;
+            if self.is_returning {
+                break;
+            }
         }
 
         Ok(last_value)

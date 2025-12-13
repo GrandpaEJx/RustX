@@ -12,7 +12,7 @@ fn fib_iter(n) {
     // Iterative approach to avoid recursion issues in current compiler version
     i = 2
     while i <= n {
-        temp = a + b
+        temp = (a + b) % 1000000
         a = b
         b = temp
         i = i + 1
@@ -20,7 +20,7 @@ fn fib_iter(n) {
     return b
 }
 
-N = 5000000 // Higher number for iterative
+N = 50000 // Higher number for iterative
 print(`Calculating Fibonacci of {N}...`)
 result = fib_iter(N)
 print("Calculation done.") 
