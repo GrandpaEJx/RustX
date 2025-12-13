@@ -130,6 +130,21 @@ cargo run --bin rustx_lang -- --verbose script.rsx
 cargo run --bin rustx_lang -- --ast --time --verbose script.rsx
 ```
 
+## Compiling to Native Binary
+
+You can compile your RustX scripts into standalone, native executables using the `build` command.
+
+```bash
+# Basic compilation
+cargo run --bin rustx_lang build script.rsx
+
+# Specify output filename
+cargo run --bin rustx_lang build script.rsx --output my_app
+```
+
+This transpiles your RustX code to Rust and compiles it with `cargo build --release`.
+**Note:** You must have the `rustx_core` crate available for this to work.
+
 ## Next Steps
 
 - [Language Reference](language-reference.md) - Learn the syntax

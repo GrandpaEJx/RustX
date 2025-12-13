@@ -31,6 +31,16 @@ rustx_lang examples/basic.rsx
 cargo run --bin rustx_lang -- examples/basic.rsx
 ```
 
+### Compile to Binary <0.3.0>
+
+```bash
+# Compile a script to a standalone executable
+rustx_lang build examples/basic.rsx --output my_app
+
+# Run the compiled binary
+./my_app
+```
+
 ### Start REPL
 
 ```bash
@@ -54,6 +64,7 @@ print(`Hello, {name}!`)
 - 🔗 **Rust Integration** - Use RustX in Rust via macros
 - 📦 **Rich Built-ins** - 15+ built-in functions
 - 🎯 **Template Strings** - Backtick strings with `{var}` interpolation
+- 🛠️ **Compiler** - Transpiles to Rust for native performance
 - 🔄 **REPL** - Interactive shell with history
 - ⚡ **Fast** - Tree-walk interpreter written in Rust
 
