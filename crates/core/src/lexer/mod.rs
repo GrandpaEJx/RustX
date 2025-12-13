@@ -1,11 +1,15 @@
-use crate::token::Token;
 use std::iter::Peekable;
 use std::str::Chars;
 
+pub mod token;
+pub mod readers;
+
+use token::Token;
+
 /// Lexer for tokenizing RustX source code
 pub struct Lexer<'a> {
-    input: Peekable<Chars<'a>>,
-    current_char: Option<char>,
+    pub(crate) input: Peekable<Chars<'a>>,
+    pub(crate) current_char: Option<char>,
 }
 
 impl<'a> Lexer<'a> {
@@ -20,168 +24,18 @@ impl<'a> Lexer<'a> {
     }
 
     /// Advances to the next character
-    fn advance(&mut self) {
+    pub(crate) fn advance(&mut self) {
         self.current_char = self.input.next();
     }
 
     /// Peeks at the next character without consuming it
-    fn peek(&mut self) -> Option<&char> {
+    pub(crate) fn peek(&mut self) -> Option<&char> {
         self.input.peek()
-    }
-
-    /// Skips whitespace (except newlines, which are significant)
-    fn skip_whitespace(&mut self) {
-        while let Some(ch) = self.current_char {
-            if ch == ' ' || ch == '\t' || ch == '\r' {
-                self.advance();
-            } else {
-                break;
-            }
-        }
-    }
-
-    /// Skips single-line comments starting with //
-    fn skip_line_comment(&mut self) {
-        while let Some(ch) = self.current_char {
-            if ch == '\n' {
-                break;
-            }
-            self.advance();
-        }
-    }
-
-    /// Skips multi-line comments /* ... */
-    fn skip_block_comment(&mut self) -> Result<(), String> {
-        self.advance(); // skip '/'
-        self.advance(); // skip '*'
-        
-        while let Some(ch) = self.current_char {
-            if ch == '*' {
-                self.advance();
-                if self.current_char == Some('/') {
-                    self.advance();
-                    return Ok(());
-                }
-            } else {
-                self.advance();
-            }
-        }
-        
-        Err("Unterminated block comment".to_string())
-    }
-
-    /// Reads a number (integer or float)
-    fn read_number(&mut self) -> Token {
-        let mut num_str = String::new();
-        let mut is_float = false;
-
-        while let Some(ch) = self.current_char {
-            if ch.is_ascii_digit() {
-                num_str.push(ch);
-                self.advance();
-            } else if ch == '.' && !is_float {
-                // Only treat as decimal point if followed by a digit
-                if let Some(&next_ch) = self.peek() {
-                    if next_ch.is_ascii_digit() {
-                        is_float = true;
-                        num_str.push(ch);
-                        self.advance();
-                    } else {
-                        // It's a method call, not a float
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            } else {
-                break;
-            }
-        }
-
-        if is_float {
-            Token::Float(num_str.parse().unwrap_or(0.0))
-        } else {
-            Token::Int(num_str.parse().unwrap_or(0))
-        }
-    }
-
-    /// Reads an identifier or keyword
-    fn read_identifier(&mut self) -> Token {
-        let mut ident = String::new();
-
-        while let Some(ch) = self.current_char {
-            if ch.is_alphanumeric() || ch == '_' {
-                ident.push(ch);
-                self.advance();
-            } else {
-                break;
-            }
-        }
-
-        Token::is_keyword(&ident).unwrap_or(Token::Ident(ident))
-    }
-
-    /// Reads a string literal
-    fn read_string(&mut self) -> Result<Token, String> {
-        self.advance(); // skip opening quote
-        let mut string = String::new();
-
-        while let Some(ch) = self.current_char {
-            if ch == '"' {
-                self.advance();
-                return Ok(Token::String(string));
-            } else if ch == '\\' {
-                self.advance();
-                match self.current_char {
-                    Some('n') => string.push('\n'),
-                    Some('t') => string.push('\t'),
-                    Some('r') => string.push('\r'),
-                    Some('\\') => string.push('\\'),
-                    Some('"') => string.push('"'),
-                    _ => return Err("Invalid escape sequence".to_string()),
-                }
-                self.advance();
-            } else {
-                string.push(ch);
-                self.advance();
-            }
-        }
-
-        Err("Unterminated string".to_string())
-    }
-
-    /// Reads a template string literal (backtick strings)
-    fn read_template_string(&mut self) -> Result<Token, String> {
-        self.advance(); // skip opening backtick
-        let mut string = String::new();
-
-        while let Some(ch) = self.current_char {
-            if ch == '`' {
-                self.advance();
-                return Ok(Token::TemplateString(string));
-            } else if ch == '\\' {
-                self.advance();
-                match self.current_char {
-                    Some('n') => string.push('\n'),
-                    Some('t') => string.push('\t'),
-                    Some('r') => string.push('\r'),
-                    Some('\\') => string.push('\\'),
-                    Some('`') => string.push('`'),
-                    _ => return Err("Invalid escape sequence".to_string()),
-                }
-                self.advance();
-            } else {
-                string.push(ch);
-                self.advance();
-            }
-        }
-
-        Err("Unterminated template string".to_string())
     }
 
     /// Gets the next token
     pub fn next_token(&mut self) -> Result<Token, String> {
-        self.skip_whitespace();
+        readers::skip_whitespace(self);
 
         match self.current_char {
             None => Ok(Token::Eof),
@@ -194,10 +48,10 @@ impl<'a> Lexer<'a> {
                 if ch == '/' {
                     if let Some(&next_ch) = self.peek() {
                         if next_ch == '/' {
-                            self.skip_line_comment();
+                            readers::skip_line_comment(self);
                             return self.next_token();
                         } else if next_ch == '*' {
-                            self.skip_block_comment()?;
+                            readers::skip_block_comment(self)?;
                             return self.next_token();
                         }
                     }
@@ -205,22 +59,22 @@ impl<'a> Lexer<'a> {
 
                 // Numbers
                 if ch.is_ascii_digit() {
-                    return Ok(self.read_number());
+                    return Ok(readers::read_number(self));
                 }
 
                 // Identifiers and keywords
                 if ch.is_alphabetic() || ch == '_' {
-                    return Ok(self.read_identifier());
+                    return Ok(readers::read_identifier(self));
                 }
 
                 // String literals
                 if ch == '"' {
-                    return self.read_string();
+                    return readers::read_string(self);
                 }
 
                 // Template string literals
                 if ch == '`' {
-                    return self.read_template_string();
+                    return readers::read_template_string(self);
                 }
 
                 // Operators and delimiters

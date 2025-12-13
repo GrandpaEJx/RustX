@@ -90,8 +90,8 @@
 
 ### High Priority (Do Now)
 
-- [/] Complete parser module refactoring (1/5 files done)
-- [ ] Complete lexer module refactoring
+- [x] Complete parser module refactoring (Split into mod/expr/stmt)
+- [x] Complete lexer module refactoring (Split into mod/token/readers)
 - [x] Add more built-in functions (len, push, pop, type) ✅
 - [ ] Add string manipulation functions (split, join, trim, upper, lower)
 - [ ] Add math functions (abs, min, max, floor, ceil, round)
