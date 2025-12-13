@@ -97,8 +97,8 @@
 - [x] Add math functions (abs, min, max, floor, ceil, round)
 - [x] Add array functions (map, filter, reduce, reverse, sort)
 - [x] Run all examples and verify output
-- [ ] Compiler: Support recursive functions
-- [ ] Compiler: Support template strings
+- [x] Compiler: Support recursive functions
+- [x] Compiler: Support template strings
 - [ ] Update FAQ in README with common questions
 
 ### Medium Priority

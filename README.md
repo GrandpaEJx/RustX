@@ -179,6 +179,17 @@ RustX/
 └── docs/          # Documentation
 ```
 
+## FAQ
+
+**Q: Is RustX faster than Python?**  
+A: The interpreter is generally slower than CPython, but the **compiler** (which compiles to native Rust) can be significantly faster, especially for loop-heavy code.
+
+**Q: Can I use crates.io libraries?**  
+A: Not directly in RustX scripts. However, you can use the `rx!` macro to embed RustX within a standard Rust project, where you have full access to crates.io.
+
+**Q: Does RustX support classes/structs?**  
+A: Not yet. We support Maps and Functions for data structure and logic.
+
 ## Contributing
 
 Contributions welcome! Please read our [contributing guidelines](CONTRIBUTING.md).

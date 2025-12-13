@@ -79,35 +79,27 @@ impl Transpiler {
                 self.push_line(&format!("{};", expr_code));
             }
             Stmt::Function { name, params, body } => {
-                 self.declare(name.clone());
-                 // Define closure type explicitly or infer?
-                 // Infer is better but we might need type hints for params.
-                 // "let mut name = |p1, p2| .."
-                 // But Rust closures must infer types from usage. 
-                 // If we don't use it immediately, it might fail.
-                 // Better to wrap in Value::Function if we want to pass it around, 
-                 // BUT for performance we want native closure if possible.
-                 // Compromise: Transpile to simple Rust function if declared at top level?
-                 // But then main() can't access it easily if it captures scope?
-                 // No, top level functions don't capture main scope.
-                 // Let's stick to closure for now as it's most flexible for scripting.
+                 // Transpile as inner function to support recursion
+                 // Note: Inner functions cannot capture environment, strictly pure or arg-based
                  
-                 // Param names
                  let params_str = params.iter().map(|p| format!("{}: Value", p)).collect::<Vec<_>>().join(", ");
                  
-                 self.push_line(&format!("let {} = |{}| -> Result<Value, String> {{", name, params_str));
+                 self.push_line(&format!("fn {}({}) -> Result<Value, String> {{", name, params_str));
                  self.indent_level += 1;
+                 
+                 // We don't need to declare params in scope because they are args
+                 // But we might need to track them if we check scope?
                  self.enter_scope();
                  for param in params {
                      self.declare(param.clone());
                  }
                  
                  let body_code = self.transpile_expr_string(body);
-                 self.push_line(&body_code);
+                 self.push_line(&format!("Ok({})", body_code));
                  
                  self.exit_scope();
                  self.indent_level -= 1;
-                 self.push_line("};");
+                 self.push_line("}");
             }
             Stmt::Return(opt_expr) => {
                 if let Some(expr) = opt_expr {
@@ -166,7 +158,63 @@ impl Transpiler {
             Expr::Bool(b) => format!("Value::Bool({})", b),
             Expr::Null => "Value::Null".to_string(),
             Expr::Ident(name) => format!("{}.clone()", name),
-            Expr::TemplateString(s) => format!("Value::String(\"{}\".to_string())", s), // Todo: compile-time interpolation
+            Expr::TemplateString(s) => {
+                // Parse template string "Hello {name}!" -> format!("Hello {}!", name)
+                let mut format_str = String::new();
+                let mut args = Vec::new();
+                let mut chars = s.chars().peekable();
+                
+                while let Some(ch) = chars.next() {
+                    if ch == '{' {
+                        if let Some(&next) = chars.peek() {
+                            if next == '{' {
+                                // Escaped {{
+                                format_str.push_str("{{"); // Rust format escape is {{
+                                chars.next(); 
+                            } else {
+                                // Variable start
+                                let mut var_name = String::new();
+                                while let Some(&c) = chars.peek() {
+                                    if c == '}' {
+                                        chars.next(); // consume }
+                                        break;
+                                    }
+                                    var_name.push(chars.next().unwrap());
+                                }
+                                
+                                if !var_name.is_empty() {
+                                    format_str.push_str("{}");
+                                    args.push(var_name);
+                                }
+                            }
+                        } else {
+                             // Trailing {
+                             format_str.push('{');
+                        }
+                    } else if ch == '}' {
+                         if let Some(&next) = chars.peek() {
+                            if next == '}' {
+                                // Escaped }}
+                                format_str.push_str("}}"); 
+                                chars.next();
+                            } else {
+                                format_str.push('}');
+                            }
+                         } else {
+                             format_str.push('}');
+                         }
+                    } else {
+                        format_str.push(ch);
+                    }
+                }
+                
+                if args.is_empty() {
+                    format!("Value::String(\"{}\".to_string())", format_str)
+                } else {
+                    let args = args.iter().map(|a| format!("{}", a)).collect::<Vec<_>>().join(", ");
+                    format!("Value::String(format!(\"{}\", {}))", format_str, args)
+                }
+            }
             Expr::Array(items) => {
                 let items_code: Vec<String> = items.iter().map(|i| self.transpile_expr_string(i)).collect();
                 format!("Value::Array(vec![{}])", items_code.join(", "))
