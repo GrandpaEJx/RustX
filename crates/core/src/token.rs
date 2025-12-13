@@ -48,6 +48,7 @@ pub enum Token {
     Comma,
     Colon,
     Semicolon,
+    Dot,      // . for method chaining
     Newline,
     
     // Special

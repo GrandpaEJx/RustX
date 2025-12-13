@@ -49,6 +49,74 @@ impl Interpreter {
             Expr::Binary { left, op, right } => self.eval_binary(*left, op, *right),
             Expr::Unary { op, expr } => self.eval_unary(op, *expr),
             Expr::Call { callee, args } => self.eval_call(*callee, args),
+            Expr::MethodCall { object, method, args } => {
+                // Evaluate the object
+                let obj_value = self.eval_expr(*object)?;
+                
+                // Call the appropriate method based on the method name
+                match method.as_str() {
+                    // String methods
+                    "upper" => match obj_value {
+                        Value::String(s) => Ok(Value::String(s.to_uppercase())),
+                        _ => Err("upper() can only be called on strings".to_string()),
+                    },
+                    "lower" => match obj_value {
+                        Value::String(s) => Ok(Value::String(s.to_lowercase())),
+                        _ => Err("lower() can only be called on strings".to_string()),
+                    },
+                    "trim" => match obj_value {
+                        Value::String(s) => Ok(Value::String(s.trim().to_string())),
+                        _ => Err("trim() can only be called on strings".to_string()),
+                    },
+                    "split" => {
+                        if args.len() != 1 {
+                            return Err("split() requires exactly 1 argument".to_string());
+                        }
+                        match obj_value {
+                            Value::String(s) => {
+                                let delimiter = match self.eval_expr(args[0].clone())? {
+                                    Value::String(d) => d,
+                                    _ => return Err("split() delimiter must be a string".to_string()),
+                                };
+                                let parts: Vec<Value> = s.split(&delimiter)
+                                    .map(|p| Value::String(p.to_string()))
+                                    .collect();
+                                Ok(Value::Array(parts))
+                            }
+                            _ => Err("split() can only be called on strings".to_string()),
+                        }
+                    },
+                    // Array methods
+                    "len" => match obj_value {
+                        Value::Array(arr) => Ok(Value::Int(arr.len() as i64)),
+                        Value::String(s) => Ok(Value::Int(s.len() as i64)),
+                        Value::Map(map) => Ok(Value::Int(map.len() as i64)),
+                        _ => Err("len() can only be called on arrays, strings, or maps".to_string()),
+                    },
+                    // Math methods
+                    "abs" => match obj_value {
+                        Value::Int(n) => Ok(Value::Int(n.abs())),
+                        Value::Float(f) => Ok(Value::Float(f.abs())),
+                        _ => Err("abs() can only be called on numbers".to_string()),
+                    },
+                    "floor" => match obj_value {
+                        Value::Float(f) => Ok(Value::Int(f.floor() as i64)),
+                        Value::Int(n) => Ok(Value::Int(n)),
+                        _ => Err("floor() can only be called on numbers".to_string()),
+                    },
+                    "ceil" => match obj_value {
+                        Value::Float(f) => Ok(Value::Int(f.ceil() as i64)),
+                        Value::Int(n) => Ok(Value::Int(n)),
+                        _ => Err("ceil() can only be called on numbers".to_string()),
+                    },
+                    "round" => match obj_value {
+                        Value::Float(f) => Ok(Value::Int(f.round() as i64)),
+                        Value::Int(n) => Ok(Value::Int(n)),
+                        _ => Err("round() can only be called on numbers".to_string()),
+                    },
+                    _ => Err(format!("Unknown method: {}", method)),
+                }
+            }
             Expr::Array(elements) => {
                 let mut arr = Vec::new();
                 for elem in elements {

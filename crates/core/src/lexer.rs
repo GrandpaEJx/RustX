@@ -80,12 +80,14 @@ impl<'a> Lexer<'a> {
                 num_str.push(ch);
                 self.advance();
             } else if ch == '.' && !is_float {
+                // Only treat as decimal point if followed by a digit
                 if let Some(&next_ch) = self.peek() {
                     if next_ch.is_ascii_digit() {
                         is_float = true;
                         num_str.push(ch);
                         self.advance();
                     } else {
+                        // It's a method call, not a float
                         break;
                     }
                 } else {
@@ -237,6 +239,7 @@ impl<'a> Lexer<'a> {
                     ',' => Token::Comma,
                     ':' => Token::Colon,
                     ';' => Token::Semicolon,
+                    '.' => Token::Dot,
                     '!' => {
                         if let Some(&'=') = self.peek() {
                             self.advance();

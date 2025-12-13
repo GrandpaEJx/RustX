@@ -33,6 +33,13 @@ pub enum Expr {
         args: Vec<Expr>,
     },
     
+    // Method call (for chaining)
+    MethodCall {
+        object: Box<Expr>,
+        method: String,
+        args: Vec<Expr>,
+    },
+    
     // Array literal
     Array(Vec<Expr>),
     

@@ -350,7 +350,7 @@ impl Parser {
         }
     }
 
-    /// Parses postfix expressions (calls, indexing)
+    /// Parses postfix expressions (calls, indexing, method calls)
     fn parse_postfix(&mut self) -> Result<Expr, String> {
         let mut expr = self.parse_primary()?;
 
@@ -380,6 +380,41 @@ impl Parser {
                     expr = Expr::Index {
                         object: Box::new(expr),
                         index: Box::new(index),
+                    };
+                }
+                Token::Dot => {
+                    self.advance(); // consume '.'
+                    
+                    // Get method name
+                    let method = match self.current_token() {
+                        Token::Ident(name) => name.clone(),
+                        _ => return Err("Expected method name after '.'".to_string()),
+                    };
+                    self.advance();
+                    
+                    // Check for method call with parentheses
+                    let args = if matches!(self.current_token(), Token::LParen) {
+                        self.advance();
+                        let mut args = Vec::new();
+                        
+                        while !matches!(self.current_token(), Token::RParen) {
+                            args.push(self.parse_expression()?);
+                            if matches!(self.current_token(), Token::Comma) {
+                                self.advance();
+                            }
+                        }
+                        
+                        self.expect(Token::RParen)?;
+                        args
+                    } else {
+                        // Method call without parentheses (property-like)
+                        Vec::new()
+                    };
+                    
+                    expr = Expr::MethodCall {
+                        object: Box::new(expr),
+                        method,
+                        args,
                     };
                 }
                 _ => break,
