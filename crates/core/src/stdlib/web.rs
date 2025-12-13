@@ -97,7 +97,9 @@ pub fn app(args: Vec<Value>) -> Result<Value, String> {
              else { return Err("app.listen: Third argument (workers) must be integer".to_string()); }
         }
         
-        println!("Server starting on {}:{} with {} workers (debug={})", host, port, workers, debug);
+        if debug {
+            println!("Server starting on {}:{} with {} workers (debug={})", host, port, workers, debug);
+        }
         
         // Start Actix System
         actix_web::rt::System::new().block_on(async move {
