@@ -10,6 +10,10 @@ pub use environment::Environment;
 
 use crate::ast::Stmt;
 use crate::value::Value;
+use crate::lexer::Lexer;
+use crate::parser::Parser;
+use std::fs;
+use std::collections::HashMap;
 
 /// Interpreter for RustX
 pub struct Interpreter {
@@ -77,6 +81,27 @@ impl Interpreter {
             }
             _ => Err("Not a callable function".to_string()),
         }
+    }
+
+    /// Evaluates an imported file and returns its exports
+    pub(super) fn eval_import_file(&mut self, path: &str) -> Result<Value, String> {
+        let source = fs::read_to_string(path).map_err(|e| format!("Failed to read import '{}': {}", path, e))?;
+        
+        // Tokenize
+        let mut lexer = Lexer::new(&source);
+        let tokens = lexer.tokenize()?;
+        
+        // Parse
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse()?;
+        
+        // created new interpreter for isolation
+        let mut module_interpreter = Interpreter::new();
+        module_interpreter.eval_program(ast)?;
+        
+        // Extract exports
+        let exports = module_interpreter.env.get_exports();
+        Ok(Value::Map(exports))
     }
 }
 

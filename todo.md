@@ -103,7 +103,7 @@
 
 ### Medium Priority
 
-- [ ] Import system for `.rsl` files
+- [x] Import system for `.rsx` files
 - [ ] Standard library (string, math, array functions)
 - [ ] Context capture for macros (access Rust variables)
 - [ ] More comprehensive examples (file I/O, JSON parsing)

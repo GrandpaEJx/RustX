@@ -135,7 +135,40 @@ impl Interpreter {
                         Value::Int(n) => Ok(Value::Int(n)),
                         _ => Err("round() can only be called on numbers".to_string()),
                     },
-                    _ => Err(format!("Unknown method: {}", method)),
+                    _ => {
+                        // Fallback: Check if object is a map and method is a key
+                        if let Value::Map(ref map) = obj_value {
+                            if let Some(val) = map.get(&method) {
+                                // If arguments are provided for a non-method map entry, it might be a function call on that entry?
+                                // Standard Dot Access "lib.func(args)" vs "lib.func"
+                                // If "lib.func" is called as method, args are provided.
+                                // If "lib.PI" is access, args are likely empty (checked by parser? No, MethodCall ALWAYS has args Vec)
+                                // Parser wraps property access like `lib.PI` as MethodCall with empty args ??
+                                // Wait, parser likely produces `MethodCall` if `.` follows.
+                                // If `lib.PI` is just access, args is empty.
+                                if args.is_empty() {
+                                    return Ok(val.clone());
+                                } else {
+                                    // It's a method call simulation: `lib.func(arg)`
+                                    // `val` is the function.
+                                    // Use `apply_function`? Or `eval_call` logic?
+                                    // `apply_function` takes Values. `args` here are `Expr`.
+                                    // So we need to evaluate args.
+                                    // This reuses the logic from `eval_call` basically.
+                                    // Wait, `eval_expr` logic for `Expr::Call` handles `Expr` args.
+                                    // Here we are inside `Expr::MethodCall`.
+                                    
+                                     // Evaluate arguments first
+                                    let mut arg_values = Vec::new();
+                                    for arg in args {
+                                        arg_values.push(self.eval_expr(arg)?);
+                                    }
+                                    return self.apply_function(val.clone(), arg_values);
+                                }
+                            }
+                        }
+                        Err(format!("Unknown method or property: {}", method))
+                    }
                 }
             }
             Expr::Array(elements) => {

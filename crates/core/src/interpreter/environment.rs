@@ -60,6 +60,15 @@ impl Environment {
         }
         Err(format!("Undefined variable: {}", name))
     }
+    /// Gets all variables in the global scope (for module exports)
+    pub fn get_exports(&self) -> HashMap<String, Value> {
+        // We assume the bottom-most scope is the global/module scope
+        if let Some(scope) = self.scopes.first() {
+            scope.clone()
+        } else {
+            HashMap::new()
+        }
+    }
 }
 
 impl Default for Environment {

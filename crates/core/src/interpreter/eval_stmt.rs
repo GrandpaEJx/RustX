@@ -95,8 +95,13 @@ impl Interpreter {
 
                 Ok(last_value)
             }
-            Stmt::Import { .. } => {
-                // Import system not yet implemented
+            Stmt::Import { path, alias } => {
+                let module = self.eval_import_file(&path)?;
+                if let Some(name) = alias {
+                    self.env.set(name, module);
+                } else {
+                    return Err("Import statement currently requires an alias (e.g., import \"file.rsx\" as name)".to_string());
+                }
                 Ok(Value::Null)
             }
         }
