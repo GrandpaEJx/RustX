@@ -15,6 +15,7 @@ pub enum Value {
         params: Vec<String>,
         body: crate::ast::Expr,
     },
+    NativeFunction(fn(Vec<Value>) -> Result<Value, String>),
 }
 
 impl fmt::Display for Value {
@@ -46,6 +47,7 @@ impl fmt::Display for Value {
                 write!(f, "}}")
             }
             Value::Function { .. } => write!(f, "<function>"),
+            Value::NativeFunction(_) => write!(f, "<native_function>"),
         }
     }
 }
@@ -62,6 +64,7 @@ impl Value {
             Value::Array(a) => !a.is_empty(),
             Value::Map(m) => !m.is_empty(),
             Value::Function { .. } => true,
+            Value::NativeFunction(_) => true,
         }
     }
 
@@ -132,6 +135,7 @@ impl Value {
             Value::Array(_) => "array",
             Value::Map(_) => "map",
             Value::Function { .. } => "function",
+            Value::NativeFunction(_) => "native_function",
             Value::Null => "null",
         }.to_string()
     }
@@ -390,6 +394,100 @@ impl Value {
             Value::Int(n) => Ok(Value::Int(-n)),
             Value::Float(f) => Ok(Value::Float(-f)),
             _ => Err(format!("Invalid operand for negation: {:?}", self)),
+        }
+    }
+
+    /// Calls a method on the value
+    pub fn call_method(&mut self, method: &str, args: Vec<Value>) -> Result<Value, String> {
+        match method {
+             "len" => {
+                 if !args.is_empty() { return Err("len() takes no arguments".to_string()); }
+                 Ok(Value::Int(self.len()?))
+             }
+             "push" => {
+                 if args.len() != 1 { return Err("push() takes 1 argument".to_string()); }
+                 self.push(args[0].clone())
+             }
+             "pop" => {
+                 if !args.is_empty() { return Err("pop() takes no arguments".to_string()); }
+                 self.pop()
+             }
+             "upper" => {
+                 if !args.is_empty() { return Err("upper() takes no arguments".to_string()); }
+                 self.upper()
+             }
+             "lower" => {
+                 if !args.is_empty() { return Err("lower() takes no arguments".to_string()); }
+                 self.lower()
+             }
+             "trim" => {
+                 if !args.is_empty() { return Err("trim() takes no arguments".to_string()); }
+                 self.trim()
+             }
+             "split" => {
+                 if args.len() != 1 { return Err("split() takes 1 argument".to_string()); }
+                 self.split(&args[0])
+             }
+             "abs" => {
+                 if !args.is_empty() { return Err("abs() takes no arguments".to_string()); }
+                 self.abs()
+             }
+             "floor" => {
+                 if !args.is_empty() { return Err("floor() takes no arguments".to_string()); }
+                 self.floor()
+             }
+             "ceil" => {
+                 if !args.is_empty() { return Err("ceil() takes no arguments".to_string()); }
+                 self.ceil()
+             }
+             "round" => {
+                 if !args.is_empty() { return Err("round() takes no arguments".to_string()); }
+                 self.round()
+             }
+             // Add others here (reverse, sort, map, filter...) 
+             // Logic for map/filter uses callbacks which is complex in shared Value struct 
+             // because it requires executing the callback. `Value` doesn't have Interpreter context.
+             // BUT for JIT transpiled code, the callback is a Function/NativeFunction.
+             // NativeFunction can be executed. Function (AST) needs Interpreter.
+             // This is the tricky part. `eval_expr` had access to `Interpreter`.
+             // `Value::call_method` does NOT have access to Interpreter.
+             // So `Value::call_method` cannot execute AST functions!
+             // It can only execute NativeFunctions.
+             // stdlib functions are NativeFunctions. So `json.parse` works.
+             // But `map(fn(x) => x+1)`? Transpiled code handles closures differently?
+             // Transpiler compiles AST functions to ... `Value::Function` or Rust closure?
+             // Transpiler compiles `fn` to `Value::Function` currently (Step 517, line 89-107 transpiles `Stmt::Function` to Rust function, but `Expr::Function` not handled?). 
+             // Actually `Stmt::Function` defines a named function.
+             // Closures? Not supported yet?
+             // `stdlib_test.rsx` doesn't use `map`/`filter` with callbacks.
+             // It uses `json.parse` (NativeFunction).
+             // So for `json.parse`, `call_method` can fallback to map lookup.
+             
+             _ => {
+                 // Map method lookup
+                 if let Value::Map(map) = self {
+                     if let Some(val) = map.get(method) {
+                         match val {
+                             Value::NativeFunction(f) => f(args),
+                             Value::Function { .. } => {
+                                 // We cannot execute AST function here without Interpreter.
+                                 // For Transpiler/JIT, AST functions should probably not exist in this form?
+                                 // Or Transpiler should compile them to NativeFunctions (fn pointers)?
+                                 // For now, return Error if trying to call AST function from JIT via call_method.
+                                 Err("Cannot call interpreted function from compiled code (yet)".to_string())
+                             }
+                             _ => Ok(val.clone()), // Property access if not a function? No, `method(...)` implies call.
+                             // But wait, `json.parse` is a look up which returns a function, then called?
+                             // Expr::MethodCall syntax `obj.method(args)` implies immediate call.
+                             // My fallback logic checks if it's a function.
+                         }
+                     } else {
+                         Err(format!("Unknown method '{}'", method))
+                     }
+                 } else {
+                     Err(format!("Type {} has no method '{}'", self.type_name(), method))
+                 }
+             }
         }
     }
 }

@@ -28,14 +28,59 @@ impl Transpiler {
     pub fn transpile(&mut self, stmts: &[Stmt]) -> String {
         self.code.clear();
         self.code.push_str("use rustx_core::value::Value;\n");
+        self.code.push_str("use std::collections::HashMap;\n");
 
         self.code.push_str("#[allow(unreachable_code)]\nfn main() -> Result<(), String> {\n");
         self.indent_level += 1;
         
+        // Initialize Standard Library
+        self.push_line("// Stdlib Init");
+        
+        // JSON
+        self.push_line("{");
+        self.push_line("    let mut map = HashMap::new();");
+        self.push_line("    map.insert(\"parse\".to_string(), Value::NativeFunction(rustx_core::stdlib::json::parse));");
+        self.push_line("    map.insert(\"stringify\".to_string(), Value::NativeFunction(rustx_core::stdlib::json::stringify));");
+        self.declare("json".to_string());
+        self.push_line("    let json = Value::Map(map);");
+        
+        // HTTP
+        self.push_line("    let mut map = HashMap::new();");
+        self.push_line("    map.insert(\"get\".to_string(), Value::NativeFunction(rustx_core::stdlib::http::get));");
+        self.push_line("    map.insert(\"post\".to_string(), Value::NativeFunction(rustx_core::stdlib::http::post));");
+        self.declare("http".to_string());
+        self.push_line("    let http = Value::Map(map);");
+        
+        // OS
+        self.push_line("    let mut map = HashMap::new();");
+        self.push_line("    map.insert(\"env\".to_string(), Value::NativeFunction(rustx_core::stdlib::os::env));");
+        self.push_line("    map.insert(\"args\".to_string(), Value::NativeFunction(rustx_core::stdlib::os::args));");
+        self.declare("os".to_string());
+        self.push_line("    let os = Value::Map(map);");
+        
+        // Time
+        self.push_line("    let mut map = HashMap::new();");
+        self.push_line("    map.insert(\"now\".to_string(), Value::NativeFunction(rustx_core::stdlib::time::now));");
+        self.push_line("    map.insert(\"sleep\".to_string(), Value::NativeFunction(rustx_core::stdlib::time::sleep));");
+        self.declare("time".to_string());
+        self.push_line("    let time = Value::Map(map);");
+        
         for stmt in stmts {
             self.transpile_stmt(stmt);
         }
-
+        
+        self.push_line("}"); // Close block for stdlib scope? No, variables need to be available.
+        // Actually, variables initialized in a block are dropped.
+        // I should NOT use a block wrapper '{' unless I declare them outside.
+        // But I need to avoid name collisions? No, these are top level.
+        // BUT wait. `let json = ...` creates a variable.
+        // Subsequent code uses `json`.
+        // If I put them in a block ` { ... stmts ... }`, then fine.
+        // But `transpile` logic appends statement code *after*.
+        // So I should just declare them in `main` scope.
+        // Remove the `{` and `}` wrapper for safety of scope.
+        // And `self.declare` updates `self.scopes` so `Expr::Ident` knows about them.
+        
         self.push_line("Ok(())");
         self.indent_level -= 1;
         self.code.push_str("}\n");
@@ -170,7 +215,7 @@ impl Transpiler {
         match expr {
             Expr::Int(n) => format!("Value::Int({})", n),
             Expr::Float(f) => format!("Value::Float({:?})", f),
-            Expr::String(s) => format!("Value::String(\"{}\".to_string())", s),
+            Expr::String(s) => format!("Value::String({:?}.to_string())", s),
             Expr::Bool(b) => format!("Value::Bool({})", b),
             Expr::Null => "Value::Null".to_string(),
             Expr::Ident(name) => {
@@ -315,21 +360,20 @@ impl Transpiler {
             }
             Expr::MethodCall { object, method, args } => {
                 let obj_code = self.transpile_expr_string(object);
-                let args_code: Vec<String> = args.iter().map(|a| self.transpile_expr_string(a)).collect();
                 
-                 match method.as_str() {
-                     "upper" => format!("{}.upper()?", obj_code),
-                     "lower" => format!("{}.lower()?", obj_code),
-                     "trim" => format!("{}.trim()?", obj_code),
-                     "abs" => format!("{}.abs()?", obj_code),
-                     "floor" => format!("{}.floor()?", obj_code),
-                     "ceil" => format!("{}.ceil()?", obj_code),
-                     "pop" => format!("{}.pop()?", obj_code),
-                     "split" => format!("{}.split(&{})?", obj_code, args_code[0]),
-                     "push" => format!("{}.push({})?", obj_code, args_code[0]),
-                     "len" => format!("Value::Int({}.len()?)", obj_code),
-                     _ => "Value::Null".to_string(), // Missing: map, filter etc
-                 }
+                // Collect args
+                let mut args_code_vec = Vec::new();
+                for arg in args {
+                    args_code_vec.push(self.transpile_expr_string(arg));
+                }
+                let args_code = if args_code_vec.is_empty() {
+                    "vec![]".to_string()
+                } else {
+                    format!("vec![{}]", args_code_vec.join(", "))
+                };
+
+                // Use the new centralized call_method
+                format!("{}.call_method(\"{}\", {})?", obj_code, method, args_code)
             }
             _ => "Value::Null".to_string(),
         }

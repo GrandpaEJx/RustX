@@ -1,5 +1,6 @@
 pub mod lexer;
 pub mod compiler;
+pub mod stdlib; // Export stdlib
 pub mod ast;
 pub mod parser;
 pub mod value;

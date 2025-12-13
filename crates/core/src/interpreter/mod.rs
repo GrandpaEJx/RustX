@@ -44,8 +44,36 @@ impl Interpreter {
 
     /// Initializes built-in functions
     fn init_builtins(&mut self) {
-        // Built-in print function (placeholder - will be enhanced later)
-        // For now, we'll add range as a special case in eval_call
+        // Core builtins
+        self.env.set("print".to_string(), Value::NativeFunction(|args| {
+            let output = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>().join(" ");
+            println!("{}", output);
+            Ok(Value::Null)
+        }));
+
+        // JSON
+        let mut json_mod = HashMap::new();
+        json_mod.insert("parse".to_string(), Value::NativeFunction(crate::stdlib::json::parse));
+        json_mod.insert("stringify".to_string(), Value::NativeFunction(crate::stdlib::json::stringify));
+        self.env.set("json".to_string(), Value::Map(json_mod));
+        
+        // HTTP
+        let mut http_mod = HashMap::new();
+        http_mod.insert("get".to_string(), Value::NativeFunction(crate::stdlib::http::get));
+        http_mod.insert("post".to_string(), Value::NativeFunction(crate::stdlib::http::post));
+        self.env.set("http".to_string(), Value::Map(http_mod));
+        
+        // OS
+        let mut os_mod = HashMap::new();
+        os_mod.insert("env".to_string(), Value::NativeFunction(crate::stdlib::os::env));
+        os_mod.insert("args".to_string(), Value::NativeFunction(crate::stdlib::os::args));
+        self.env.set("os".to_string(), Value::Map(os_mod));
+        
+        // Time
+        let mut time_mod = HashMap::new();
+        time_mod.insert("now".to_string(), Value::NativeFunction(crate::stdlib::time::now));
+        time_mod.insert("sleep".to_string(), Value::NativeFunction(crate::stdlib::time::sleep));
+        self.env.set("time".to_string(), Value::Map(time_mod));
     }
 
     /// Evaluates a program (list of statements)
@@ -88,6 +116,9 @@ impl Interpreter {
                 self.env.pop_scope();
 
                 Ok(result)
+            }
+            Value::NativeFunction(f) => {
+                 f(args).map_err(RuntimeError::from)
             }
             _ => Err(RuntimeError::TypeMismatch {
                 expected: "Function".to_string(),

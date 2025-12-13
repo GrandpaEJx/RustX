@@ -53,90 +53,32 @@ impl Interpreter {
                 // Evaluate the object
                 let mut obj_value = self.eval_expr(*object)?;
                 
-                // Call the appropriate method based on the method name
-                match method.as_str() {
-                    // String methods
-                    "upper" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("upper() takes no arguments".to_string())); }
-                        obj_value.upper().map_err(RuntimeError::from)
-                    }
-                    "lower" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("lower() takes no arguments".to_string())); }
-                        obj_value.lower().map_err(RuntimeError::from)
-                    }
-                    "trim" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("trim() takes no arguments".to_string())); }
-                        obj_value.trim().map_err(RuntimeError::from)
-                    }
-                    "split" => {
-                        if args.len() != 1 {
-                            return Err(RuntimeError::ArgumentError("split() requires exactly 1 argument".to_string()));
-                        }
-                        let delim = self.eval_expr(args[0].clone())?;
-                        obj_value.split(&delim).map_err(RuntimeError::from)
-                    },
-                    // Array methods
-                    "len" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("len() takes no arguments".to_string())); }
-                        Ok(Value::Int(obj_value.len().map_err(RuntimeError::from)?))
-                    },
+                // Handle callback-based methods manually (Value doesn't support them)
+                 match method.as_str() {
                     "map" => {
                         if args.len() != 1 { return Err(RuntimeError::ArgumentError("map() requires 1 argument: callback".to_string())); }
-                        self.logic_map(obj_value, args[0].clone())
+                        return self.logic_map(obj_value, args[0].clone());
                     },
                     "filter" => {
                         if args.len() != 1 { return Err(RuntimeError::ArgumentError("filter() requires 1 argument: callback".to_string())); }
-                        self.logic_filter(obj_value, args[0].clone())
+                        return self.logic_filter(obj_value, args[0].clone());
                     },
                     "reduce" => {
                         if args.is_empty() || args.len() > 2 { return Err(RuntimeError::ArgumentError("reduce() requires 1 or 2 arguments: callback, [initial]".to_string())); }
                         let initial = if args.len() == 2 { Some(args[1].clone()) } else { None };
-                        self.logic_reduce(obj_value, args[0].clone(), initial)
+                        return self.logic_reduce(obj_value, args[0].clone(), initial);
                     },
-                    "reverse" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("reverse() takes no arguments".to_string())); }
-                        obj_value.reverse_in_place().map_err(RuntimeError::from)
-                    },
-                    "sort" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("sort() takes no arguments".to_string())); }
-                        obj_value.sort_in_place().map_err(RuntimeError::from)
-                    },
-                    // Math methods
-                    "abs" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("abs() takes no arguments".to_string())); }
-                        obj_value.abs().map_err(RuntimeError::from)
-                    },
-                    "floor" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("floor() takes no arguments".to_string())); }
-                        obj_value.floor().map_err(RuntimeError::from)
-                    },
-                    "ceil" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("ceil() takes no arguments".to_string())); }
-                        obj_value.ceil().map_err(RuntimeError::from)
-                    },
-                    "round" => {
-                        if !args.is_empty() { return Err(RuntimeError::ArgumentError("round() takes no arguments".to_string())); }
-                        obj_value.round().map_err(RuntimeError::from)
-                    },
-                    _ => {
-                        // Fallback: Check if object is a map and method is a key
-                        if let Value::Map(ref map) = obj_value {
-                            if let Some(val) = map.get(&method) {
-                                if args.is_empty() {
-                                    return Ok(val.clone());
-                                } else {
-                                     // Evaluate arguments first
-                                    let mut arg_values = Vec::new();
-                                    for arg in args {
-                                        arg_values.push(self.eval_expr(arg)?);
-                                    }
-                                    return self.apply_function(val.clone(), arg_values);
-                                }
-                            }
-                        }
-                        Err(RuntimeError::UnknownMethod(method))
-                    }
+                    _ => {}
+                 }
+
+                // Evaluate arguments
+                let mut arg_values = Vec::new();
+                for arg in args {
+                    arg_values.push(self.eval_expr(arg)?);
                 }
+                
+                // Use centralized call_method
+                obj_value.call_method(&method, arg_values).map_err(RuntimeError::from)
             }
             Expr::Array(elements) => {
                 let mut arr = Vec::new();
