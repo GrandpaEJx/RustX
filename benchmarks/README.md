@@ -39,7 +39,7 @@ time rustx_lang benchmarks/method_chaining.rsx
 - `loops.rsx` - Loop iteration performance (100K+ iterations)
 - `method_chaining.rsx` - Method chaining overhead (30K ops)
 
-## Web Server Performance (v0.3.0)
+## Web Server Performance (v0.4.0)
 
 **Last Updated:** 2025-12-13 21:13:00
 
