@@ -73,7 +73,7 @@ RustX supports both interpreted execution and JIT/AOT compilation.
 
 ## System Information
 
-- RustX Version: 0.3.0
+- RustX Version: 0.4.0
 - Optimization: Release + LTO enabled by default for JIT/Compiler modes.
 
 Run `./benchmarks/run_benchmarks.sh` for interpreter benchmarks.

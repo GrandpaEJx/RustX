@@ -63,6 +63,8 @@ print(`Hello, {name}!`)
 - 🚀 **Simple Syntax** - Clean, Python-like syntax
 - 🔗 **Rust Integration** - Use RustX in Rust via macros
 - 📦 **Rich Built-ins** - 15+ built-in functions
+- 🌐 **Web Framework** - Build high-performance web servers (67k+ RPS)
+- 🔌 **Standard Library** - web, json, time, http, os modules
 - 🎯 **Template Strings** - Backtick strings with `{var}` interpolation
 - 🛠️ **Compiler** - Transpiles to Rust for native performance
 - 🔄 **REPL** - Interactive shell with history
@@ -128,15 +130,49 @@ while x < 10 {
     x = x + 1
 }
 
+### Web Server with Standard Library <0.4.0>
+
+Build high-performance web servers with built-in modules:
+
+```rustx
+rust {
+    // Force JIT compilation
+}
+
+import web
+import json
+
+let app = web.app()
+
+fn home(body, debug) {
+    return web.json({
+        "name": "RustX API",
+        "version": "1.0.0",
+        "status": "running"
+    })
+}
+
+fn add(body, debug) {
+    let data = json.parse(body)
+    let result = data["a"] + data["b"]
+    return web.json({"sum": result})
+}
+
+app.get("/", home)
+app.post("/add", add)
+app.listen(8080, false, 4)
+```
+
+**Performance:** 67k RPS (100 connections), 57k RPS (1000 connections)
+
 ### Crate Imports & Embedded Rust <0.3.0>
 
-You can import Rust crates and even write raw Rust code directly in your RustX scripts!
+You can import Rust crates and write raw Rust code:
 
 ```rustx
 use crate "rand" = "0.8"
 
 rust {
-    // This is raw Rust code!
     fn get_random() -> Result<Value, String> {
         let n: i64 = rand::random::<u8>() as i64;
         Ok(Value::Int(n))
@@ -146,13 +182,21 @@ rust {
 print("Random:", get_random())
 ````
 
-## Built-in Functions
+## Built-in Functions & Standard Library
 
 **Core:** `print`, `range`, `len`, `type`, `push`, `pop`  
 **String:** `split`, `join`, `trim`, `upper`, `lower`  
 **Math:** `abs`, `min`, `max`, `floor`, `ceil`, `round`
 
-[See all built-in functions →](docs/built-in-functions.md)
+**Standard Library Modules:**
+
+- **`web`** - Build web servers and APIs
+- **`json`** - Parse and serialize JSON
+- **`time`** - Timestamps and delays
+- **`http`** - HTTP client requests
+- **`os`** - Environment and CLI args
+
+[See complete API reference →](docs/built-in-functions.md)
 
 ## Rust Integration
 

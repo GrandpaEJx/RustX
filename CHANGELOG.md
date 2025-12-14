@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2025-12-14
+
+### Added
+
+- **Documentation**: Comprehensive documentation for standard library modules.
+- **Web Module**: Full docs for `web.app()`, `web.json()`, and HTTP routing (`app.get()`, `app.post()`, `app.listen()`).
+- **JSON Module**: Documentation for `json.parse()` and `json.stringify()` functions.
+- **Time Module**: Documentation for `time.now()` and `time.sleep()` functions.
+- **HTTP Module**: Documentation for `http.get()` and `http.post()` client functions.
+- **OS Module**: Documentation for `os.env()` and `os.args()` system functions.
+
+### Improved
+
+- **Performance**: Web server benchmarks updated - achieving 67k RPS (100 connections) and 57k RPS (1000 connections).
+- **Documentation Structure**: Enhanced built-in functions reference with module-based organization.
+- **Examples**: Web server example now demonstrates JSON parsing, routing, and API endpoints.
+
 ## [0.3.0] - 2025-12-13
 
 ### Added

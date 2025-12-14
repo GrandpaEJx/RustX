@@ -9,6 +9,8 @@
 - [Functions](#functions)
 - [Arrays](#arrays)
 - [Template Strings](#template-strings)
+- [Method Chaining](#method-chaining)
+- [Imports & Standard Library](#imports--standard-library)
 - [Comments](#comments)
 
 ## Variables
@@ -363,6 +365,132 @@ result = "hello".upper().len()      // 5
 - `.floor()` - Round down
 - `.ceil()` - Round up
 - `.round()` - Round to nearest integer
+
+## Imports & Standard Library
+
+RustX includes a rich standard library with modules for web development, HTTP requests, JSON handling, and more.
+
+### Import Statement
+
+Use the `import` keyword to load standard library modules:
+
+```rustx
+import web
+import json
+import time
+import http
+import os
+```
+
+You can import multiple modules:
+
+```rustx
+import web
+import json
+
+let app = web.app()
+```
+
+### Available Standard Library Modules
+
+- **`web`** - Build web servers and APIs
+- **`json`** - Parse and serialize JSON data
+- **time** - Work with timestamps and delays
+- **`http`** - Make HTTP client requests
+- **`os`** - Access environment variables and CLI arguments
+
+### Web Server Example
+
+```rustx
+rust {
+    // Force JIT compilation for native performance
+}
+
+import web
+import json
+
+let app = web.app()
+
+fn home(body, debug) {
+    return web.json({
+        "status": "running",
+        "version": "1.0.0"
+    })
+}
+
+fn add_numbers(body, debug) {
+    let data = json.parse(body)
+    let result = data["a"] + data["b"]
+    return web.json({"sum": result})
+}
+
+app.get("/", home)
+app.post("/add", add_numbers)
+
+app.listen(8080, false, 4)
+```
+
+### JSON Processing
+
+```rustx
+import json
+
+// Parse JSON string
+json_str = '{"name": "Alice", "age": 30}'
+user = json.parse(json_str)
+print(user["name"])  // Alice
+
+// Serialize to JSON
+data = {"items": [1, 2, 3], "count": 3}
+output = json.stringify(data)
+print(output)  // {"items":[1,2,3],"count":3}
+```
+
+### HTTP Requests
+
+```rustx
+import http
+import json
+
+// GET request
+response = http.get("https://api.example.com/data")
+data = json.parse(response)
+
+// POST request
+payload = json.stringify({"key": "value"})
+result = http.post("https://api.example.com/submit", payload)
+```
+
+### Time Operations
+
+```rustx
+import time
+
+// Get current timestamp
+now = time.now()
+print("Timestamp:", now)
+
+// Sleep for 2 seconds
+print("Waiting...")
+time.sleep(2)
+print("Done!")
+```
+
+### Environment & Arguments
+
+```rustx
+import os
+
+// Get environment variables
+home = os.env("HOME")
+path = os.env("PATH")
+
+// Get CLI arguments
+args = os.args()
+print("Script called with:", args)
+```
+
+For complete API documentation, see [Built-in Functions](built-in-functions.md#standard-library-modules).
 
 ## Comments
 
