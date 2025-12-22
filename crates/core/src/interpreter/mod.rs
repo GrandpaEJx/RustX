@@ -80,6 +80,38 @@ impl Interpreter {
         web_mod.insert("app".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::web::app)));
         web_mod.insert("json".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::web::json)));
         self.env.set("web".to_string(), Value::Map(web_mod));
+
+        // FS
+        let mut fs_mod = HashMap::new();
+        fs_mod.insert("read".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::read)));
+        fs_mod.insert("write".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::write)));
+        fs_mod.insert("append".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::append)));
+        fs_mod.insert("exists".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::exists)));
+        fs_mod.insert("remove".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::remove)));
+        self.env.set("fs".to_string(), Value::Map(fs_mod));
+
+        // Term
+        let mut term_mod = HashMap::new();
+        term_mod.insert("red".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::red)));
+        term_mod.insert("green".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::green)));
+        term_mod.insert("blue".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::blue)));
+        term_mod.insert("yellow".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::yellow)));
+        term_mod.insert("cyan".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::cyan)));
+        term_mod.insert("magenta".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::magenta)));
+        term_mod.insert("white".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::white)));
+        term_mod.insert("bg_red".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_red)));
+        term_mod.insert("bg_green".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_green)));
+        term_mod.insert("bg_blue".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_blue)));
+        term_mod.insert("bg_yellow".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_yellow)));
+        term_mod.insert("bg_cyan".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_cyan)));
+        term_mod.insert("bg_magenta".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_magenta)));
+        term_mod.insert("bg_white".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_white)));
+        term_mod.insert("bold".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bold)));
+        term_mod.insert("dim".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::dim)));
+        term_mod.insert("italic".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::italic)));
+        term_mod.insert("clear".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::clear)));
+        term_mod.insert("underline".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::underline)));
+        self.env.set("term".to_string(), Value::Map(term_mod));
     }
 
     /// Evaluates a program (list of statements)

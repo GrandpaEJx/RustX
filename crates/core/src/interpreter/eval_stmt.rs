@@ -97,7 +97,7 @@ impl Interpreter {
             }
             Stmt::Import { path, alias } => {
                 // Check if this is a stdlib module import
-                let stdlib_modules = ["web", "json", "http", "os", "time"];
+                let stdlib_modules = ["web", "json", "http", "os", "time", "fs", "term"];
                 
                 let module = if stdlib_modules.contains(&path.as_str()) {
                     // Load stdlib module from environment

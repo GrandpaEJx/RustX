@@ -1,7 +1,7 @@
 use crate::value::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpResponse, HttpServer};
 
 #[derive(Clone)]
 struct Route {
