@@ -371,7 +371,19 @@ impl Transpiler {
                        "floor" => return format!("{}.floor()?", self.transpile_expr_string(&args[0])),
                        "ceil" => return format!("{}.ceil()?", self.transpile_expr_string(&args[0])),
                        "round" => return format!("{}.round()?", self.transpile_expr_string(&args[0])),
-                       _ => {} // Fallback to generic call
+                       _ => {
+                           // If not declared, assume native Rust function (from rust {})
+                           if !self.is_declared(name) {
+                               let args_code: Vec<String> = args.iter().map(|a| self.transpile_expr_string(a)).collect();
+                               let args_str = if args_code.is_empty() { 
+                                   "vec![]".to_string() 
+                               } else { 
+                                   format!("vec![{}]", args_code.join(", ")) 
+                               };
+                               return format!("{}({})?", name, args_str);
+                           }
+                           // Otherwise fall through to .call() on the variable
+                       }
                    }
                 }
                 

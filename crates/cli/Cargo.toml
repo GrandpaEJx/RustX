@@ -11,10 +11,10 @@ description.workspace = true
 keywords.workspace = true
 categories.workspace = true
 readme.workspace = true
-default-run = "rustx_lang"
+default-run = "rustx"
 
 [[bin]]
-name = "rustx_lang"
+name = "rustx"
 path = "src/main.rs"
 
 [dependencies]

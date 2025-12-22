@@ -55,9 +55,6 @@ impl ProjectBuilder {
             
         cargo_toml.push_str(&format!("\nrustx_core = {{ path = \"{}\" }}\n", core_path.display()));
         
-        // Add optimizations
-        cargo_toml.push_str("\n[profile.release]\nlto = true\ncodegen-units = 1\npanic = \"abort\"\nopt-level = 3\n");
-        
         // Add dynamic imports
         for stmt in ast {
             if let Stmt::RustImport { crate_name, version, .. } = stmt {
@@ -69,6 +66,9 @@ impl ProjectBuilder {
                 }
             }
         }
+
+        // Add optimizations (at the end)
+        cargo_toml.push_str("\n[profile.release]\nlto = true\ncodegen-units = 1\npanic = \"abort\"\nopt-level = 3\n");
         
         fs::write(build_dir.join("Cargo.toml"), cargo_toml)
              .map_err(|e| format!("Failed to write Cargo.toml: {}", e))?;

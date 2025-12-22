@@ -480,6 +480,14 @@ impl Value {
                  if !args.is_empty() { return Err("round() takes no arguments".to_string()); }
                  self.round()
              }
+             "reverse" => {
+                 if !args.is_empty() { return Err("reverse() takes no arguments".to_string()); }
+                 self.reverse_in_place()
+             }
+             "sort" => {
+                 if !args.is_empty() { return Err("sort() takes no arguments".to_string()); }
+                 self.sort_in_place()
+             }
              // Add others here (reverse, sort, map, filter...) 
              // Logic for map/filter uses callbacks which is complex in shared Value struct 
              // because it requires executing the callback. `Value` doesn't have Interpreter context.

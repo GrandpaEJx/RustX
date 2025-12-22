@@ -65,6 +65,14 @@ enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
+    /// Check script syntax
+    Check {
+        /// Script file to check
+        file: PathBuf,
+        /// Verbose output
+        #[arg(short, long)]
+        verbose: bool,
+    },
 }
 
 fn main() {
@@ -80,6 +88,7 @@ fn main() {
             verbose,
         }) => run_file(&file, ast, tokens, time, verbose),
         Some(Commands::Build { file, output }) => build_file(&file, output),
+        Some(Commands::Check { file, verbose }) => check_file(&file, verbose),
         None => {
             if let Some(file) = cli.file {
                 run_file(&file, cli.ast, cli.tokens, cli.time, cli.verbose);
@@ -359,4 +368,41 @@ fn print_help() {
     println!("  {}  - Exit", "Ctrl+D".bright_white());
     println!("  {}  - Interrupt current input", "Ctrl+C".bright_white());
     println!("  {}  - Navigate command history", "Up/Down arrows".bright_white());
+}
+
+/// Checks script syntax without executing
+fn check_file(path: &PathBuf, verbose: bool) {
+    if verbose {
+        println!("{} {}", "Checking:".bright_blue().bold(), path.display());
+    }
+
+    let source = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("{} {}", "Error reading file:".red().bold(), e);
+            std::process::exit(1);
+        }
+    };
+
+    // Tokenize
+    let mut lexer = Lexer::new(&source);
+    let tokens = match lexer.tokenize() {
+        Ok(t) => t,
+        Err(e) => {
+             eprintln!("{} {}", "Syntax Error (Lexer):".red().bold(), e);
+             std::process::exit(1);
+        }
+    };
+
+    // Parse
+    let mut parser = RxParser::new(tokens);
+    match parser.parse() {
+        Ok(_) => {
+            println!("{}", "Syntax OK".green().bold());
+        }
+        Err(e) => {
+             eprintln!("{} {}", "Syntax Error (Parser):".red().bold(), e);
+             std::process::exit(1);
+        }
+    }
 }
