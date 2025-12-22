@@ -68,7 +68,7 @@ pub fn app(args: Vec<Value>) -> Result<Value, String> {
     // app.listen(port, options?)
     let config_clone = Arc::clone(&config);
     map.insert("listen".to_string(), Value::NativeFunction(Arc::new(move |args| {
-        if args.len() < 1 || args.len() > 4 { 
+        if args.is_empty() || args.len() > 4 { 
             return Err("app.listen expects 1 to 4 arguments: port, [debug], [workers], [host]".to_string()); 
         }
         
@@ -120,10 +120,11 @@ pub fn app(args: Vec<Value>) -> Result<Value, String> {
                     let actix_handler = move |req_body: String| {
                         let h = handler_val.clone();
                          async move {
-                            let mut args = Vec::new();
-                             args.push(Value::String(req_body));
-                             // Pass debug flag as second argument
-                             args.push(Value::Bool(debug_val));
+                            let args = vec![
+                                Value::String(req_body),
+                                // Pass debug flag as second argument
+                                Value::Bool(debug_val),
+                            ];
 
                             let result = h.call(args);
                             

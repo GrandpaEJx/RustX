@@ -72,7 +72,7 @@ fn value_to_json(v: &Value) -> serde_json::Value {
         },
         Value::String(s) => serde_json::Value::String(s.clone()),
         Value::Array(arr) => {
-            serde_json::Value::Array(arr.iter().map(|item| value_to_json(item)).collect())
+            serde_json::Value::Array(arr.iter().map(value_to_json).collect())
         }
         Value::Map(map) => {
             let mut obj = serde_json::Map::new();
