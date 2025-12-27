@@ -4,12 +4,12 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:  # Manual trigger
     inputs:
       tag_name:
-        description: 'Tag name for release (e.g., v0.6.0)'
+        description: 'Release version (e.g., v0.6.0)'
         required: true
-        default: 'v0.6.0'
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
@@ -22,9 +22,14 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       version: ${{ steps.get_version.outputs.version }}
     steps:
-      - name: Get version from tag
+      - name: Get version
         id: get_version
-        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create Release
         id: create_release
@@ -32,81 +37,115 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
+          tag_name: ${{ steps.get_version.outputs.version }}
           release_name: RustX ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
           body: |
             ## RustX ${{ steps.get_version.outputs.version }}
             
-            ### Installation
+            ### 🚀 Quick Install
             
             **Linux/macOS:**
             ```bash
             curl -sSL https://raw.githubusercontent.com/GrandpaEJx/RustX/main/install.sh | bash
             ```
             
-            **Windows:**
-            Download the Windows binary below and add to PATH.
+            **Windows:** Download the `.zip` file below and add to PATH.
             
-            ### Downloads
-            - Linux (x86_64)
-            - macOS (x86_64, ARM64)
-            - Windows (x86_64)
+            **Android:** Download the appropriate `.tar.gz` for your device.
+            
+            ### 📦 Downloads
+            
+            **Desktop:**
+            - 🐧 Linux (x86_64, ARM64)
+            - 🍎 macOS (Intel, Apple Silicon)
+            - 🪟 Windows (x86_64)
+            
+            **Mobile:**
+            - 📱 Android (ARM64, x86_64)
+            - 📱 iOS (ARM64) - Experimental
             
             See [CHANGELOG.md](https://github.com/GrandpaEJx/RustX/blob/main/CHANGELOG.md) for details.
 
   build:
-    name: Build ${{ matrix.target }}
+    name: Build ${{ matrix.platform }}
     needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
+          # ===== DESKTOP PLATFORMS =====
+          
           # Linux x86_64
-          - os: ubuntu-latest
+          - platform: Linux x86_64
+            os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: rustx
             asset_name: rustx-linux-x86_64
           
           # Linux ARM64
-          - os: ubuntu-latest
+          - platform: Linux ARM64
+            os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             artifact_name: rustx
             asset_name: rustx-linux-aarch64
+            cross: true
           
-          # macOS x86_64
-          - os: macos-latest
+          # macOS Intel
+          - platform: macOS Intel
+            os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: rustx
             asset_name: rustx-macos-x86_64
           
-          # macOS ARM64 (M1/M2)
-          - os: macos-latest
+          # macOS Apple Silicon (M1/M2/M3)
+          - platform: macOS ARM64
+            os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: rustx
             asset_name: rustx-macos-aarch64
           
           # Windows x86_64
-          - os: windows-latest
+          - platform: Windows x86_64
+            os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: rustx.exe
             asset_name: rustx-windows-x86_64.exe
           
-          # Android ARM64
-          - os: ubuntu-latest
+          # ===== MOBILE PLATFORMS =====
+          
+          # Android ARM64 (most common)
+          - platform: Android ARM64
+            os: ubuntu-latest
             target: aarch64-linux-android
             artifact_name: rustx
             asset_name: rustx-android-aarch64
-            setup_ndk: true
+            use_ndk: true
           
-          # Android x86_64
-          - os: ubuntu-latest
+          # Android x86_64 (emulators)
+          - platform: Android x86_64
+            os: ubuntu-latest
             target: x86_64-linux-android
             artifact_name: rustx
             asset_name: rustx-android-x86_64
-            setup_ndk: true
+            use_ndk: true
+          
+          # Android ARMv7 (older devices)
+          - platform: Android ARMv7
+            os: ubuntu-latest
+            target: armv7-linux-androideabi
+            artifact_name: rustx
+            asset_name: rustx-android-armv7
+            use_ndk: true
+          
+          # iOS ARM64 (iPhone/iPad)
+          - platform: iOS ARM64
+            os: macos-latest
+            target: aarch64-apple-ios
+            artifact_name: rustx
+            asset_name: rustx-ios-aarch64
 
     steps:
       - name: Checkout code
@@ -118,31 +157,40 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cross-compilation tools (Linux ARM64)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        if: matrix.cross == true
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
       
       - name: Setup Android NDK
-        if: matrix.setup_ndk == true
+        if: matrix.use_ndk == true
         uses: nttld/setup-ndk@v1
         with:
-          ndk-version: r25c
+          ndk-version: r26b
           add-to-path: true
+      
+      - name: Configure Android environment
+        if: matrix.use_ndk == true
+        run: |
+          echo "CC_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android30-clang" >> $GITHUB_ENV
+          echo "AR_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> $GITHUB_ENV
+          echo "CC_x86_64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android30-clang" >> $GITHUB_ENV
+          echo "AR_x86_64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> $GITHUB_ENV
+          echo "CC_armv7_linux_androideabi=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi30-clang" >> $GITHUB_ENV
+          echo "AR_armv7_linux_androideabi=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> $GITHUB_ENV
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Strip binary (Unix)
         if: matrix.os != 'windows-latest'
-        run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+        run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }} || true
 
       - name: Compress binary (Unix)
         if: matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
-          mv ${{ matrix.asset_name }}.tar.gz ../../..
+          tar czf ../../../${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
 
       - name: Compress binary (Windows)
         if: matrix.os == 'windows-latest'
