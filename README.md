@@ -142,12 +142,36 @@ for i in range(5) {
 while x < 10 {
     x = x + 1
 }
+```
 
-### Web Server with Standard Library <0.4.0>
+### Module Imports (v0.5.0+)
+
+**New!** Explicit imports for better performance:
+
+```rustx
+// Import only what you need
+use json
+use os
+
+// Now use the modules
+data = json.parse(`{"name": "Alice"}`)
+path = os.env("HOME")
+```
+
+**Benefits:**
+- 🚀 Faster startup (no overhead from unused modules)
+- 📦 Cleaner transpiled code (9 lines vs 22 for hello world!)
+- 📝 Explicit dependencies (like Python/JavaScript)
+
+**Available modules:** `json`, `http`, `os`, `time`, `web`, `fs`, `term`
+
+### Web Server Example
 
 Build high-performance web servers with built-in modules:
 
 ```rustx
+use web
+
 rust {
     // Force JIT compilation
 }
