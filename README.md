@@ -138,7 +138,7 @@ fn add(a, b) => a + b  // Arrow function
 
 ### Control Flow
 
-````rustx
+```rustx
 // If expression
 result = if age >= 18 { "Adult" } else { "Minor" }
 
