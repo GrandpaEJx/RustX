@@ -169,9 +169,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pkg-config libssl-dev
 
-      - name: Install cross for cross-compilation
+      - name: Install cross (pre-built)
         if: matrix.cross == true || matrix.use_ndk == true
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        run: |
+          curl -L https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          sudo mv cross /usr/local/bin/
+          cross --version
       
       - name: Setup Android NDK
         if: matrix.use_ndk == true
