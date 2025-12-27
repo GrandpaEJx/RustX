@@ -5,6 +5,14 @@
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+## 📚 Documentation
+
+- 🚀 **[Quick Start Guide](GUIDE.md)** - Learn RustX basics
+- 📖 **[Quick Reference](QUICKREF.md)** - Syntax cheat sheet
+- 💻 **[Installation](INSTALL.md)** - Setup instructions
+- 🤝 **[Contributing](CONTRIBUTING.md)** - How to contribute
+- 📝 **[Changelog](CHANGELOG.md)** - Version history
+
 ## Quick Start
 
 ### Option 1: Download Pre-built Binary (No Rust Required!)
