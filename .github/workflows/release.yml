@@ -27,7 +27,6 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
       version: ${{ steps.get_version.outputs.version }}
     steps:
       - name: Get version
@@ -39,14 +38,14 @@ jobs:
             echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create or Update Release
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: RustX ${{ steps.get_version.outputs.version }}
+          name: RustX ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
           body: |
@@ -71,7 +70,7 @@ jobs:
             - 🪟 Windows (x86_64)
             
             **Mobile:**
-            - 📱 Android (ARM64, x86_64)
+            - 📱 Android (ARM64, x86_64, ARMv7)
             - 📱 iOS (ARM64) - Experimental
             
             See [CHANGELOG.md](https://github.com/GrandpaEJx/RustX/blob/main/CHANGELOG.md) for details.
