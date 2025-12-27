@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["GrandpaEJx"]
 license = "MIT"
@@ -18,3 +18,11 @@ description = "A clean, minimal scripting language that seamlessly integrates wi
 keywords = ["scripting", "language", "interpreter", "rust", "embedded"]
 categories = ["development-tools", "parser-implementations"]
 readme = "README.md"
+
+# Optimized release profile for standalone binary distribution
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"
