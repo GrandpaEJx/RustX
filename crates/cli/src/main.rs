@@ -472,11 +472,11 @@ fn check_file(path: &PathBuf, verbose: bool) {
 
 /// Infers output binary name from input file path
 /// Example: "path/to/script.rsx" -> "script"
-fn infer_output_name(input: &PathBuf) -> PathBuf {
+fn infer_output_name(input: &Path) -> PathBuf {
     input
         .file_stem()
         .and_then(|s| s.to_str())
-        .map(|s| PathBuf::from(s))
+        .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("output"))
 }
 
