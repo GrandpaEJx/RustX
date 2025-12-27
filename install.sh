@@ -63,29 +63,49 @@ echo ""
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 mkdir -p "$INSTALL_DIR"
 
-# Download URL (update this with actual GitHub repo)
+# Download URL
 REPO="GrandpaEJx/RustX"
-BINARY_NAME="rustx-$PLATFORM"
-DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/$BINARY_NAME"
+ARCHIVE_NAME="rustx-$PLATFORM.tar.gz"
+DOWNLOAD_URL="https://github.com/$REPO/releases/latest/download/$ARCHIVE_NAME"
 
 echo -e "${YELLOW}Downloading rustx...${NC}"
-echo "URL: $DOWNLOAD_URL"
+echo "Platform: $PLATFORM"
 
-# Download the binary
+# Create temp directory
+TMP_DIR=$(mktemp -d)
+trap "rm -rf $TMP_DIR" EXIT
+
+# Download the archive
 if command -v curl &> /dev/null; then
-    curl -L "$DOWNLOAD_URL" -o "$INSTALL_DIR/rustx" || {
-        echo -e "${RED}Download failed. Please check your internet connection.${NC}"
+    curl -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/$ARCHIVE_NAME" || {
+        echo -e "${RED}Download failed.${NC}"
+        echo "Please check:"
+        echo "  1. Your internet connection"
+        echo "  2. GitHub releases page: https://github.com/$REPO/releases"
         exit 1
     }
 elif command -v wget &> /dev/null; then
-    wget -O "$INSTALL_DIR/rustx" "$DOWNLOAD_URL" || {
-        echo -e "${RED}Download failed. Please check your internet connection.${NC}"
+    wget -q -O "$TMP_DIR/$ARCHIVE_NAME" "$DOWNLOAD_URL" || {
+        echo -e "${RED}Download failed.${NC}"
+        echo "Please check:"
+        echo "  1. Your internet connection"
+        echo "  2. GitHub releases page: https://github.com/$REPO/releases"
         exit 1
     }
 else
     echo -e "${RED}Neither curl nor wget found. Please install one of them.${NC}"
     exit 1
 fi
+
+# Extract archive
+cd "$TMP_DIR"
+tar xzf "$ARCHIVE_NAME" || {
+    echo -e "${RED}Failed to extract archive${NC}"
+    exit 1
+}
+
+# Move to install directory
+mv rustx "$INSTALL_DIR/rustx"
 
 # Make executable
 chmod +x "$INSTALL_DIR/rustx"
