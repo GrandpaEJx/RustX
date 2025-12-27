@@ -11,14 +11,12 @@ enum TypeHint {
 
 struct Optimizer {
     vars: HashMap<String, TypeHint>,
-    scopes: Vec<HashSet<String>>,
 }
 
 impl Optimizer {
     fn new() -> Self {
         Self {
             vars: HashMap::new(),
-            scopes: vec![HashSet::new()],
         }
     }
 
@@ -137,9 +135,9 @@ impl Transpiler {
                 let mod_upper = module.to_uppercase();
                 self.code.push_str(&format!("static {}: OnceLock<Value> = OnceLock::new();\n", mod_upper));
             }
-            self.code.push_str("\n");
+            self.code.push('\n');
         } else {
-            self.code.push_str("\n");
+            self.code.push('\n');
         }
         
         self.code.push_str("#[allow(unreachable_code)]\nfn main() -> Result<(), String> {\n");
@@ -326,17 +324,6 @@ impl Transpiler {
          }
     }
     
-    fn is_int_expr(&self, expr: &Expr, vars: &HashMap<String, TypeHint>) -> bool {
-        match expr {
-            Expr::Int(_) => true,
-            Expr::Ident(n) => matches!(vars.get(n), Some(TypeHint::Int)),
-            Expr::Binary { left, .. } => self.is_int_expr(left, vars), // Simplified: Assume if left is int, right must be implicit or checked before calling this? No.
-            // Correct logic:
-            // Expr::Binary needs Both?
-            // Actually `infer_expr` logic in Optimizer did this.
-            _ => false 
-        }
-    }
     
     fn is_native_bool_expr(&self, expr: &Expr, vars: &HashMap<String, TypeHint>) -> bool {
         match expr {
@@ -405,10 +392,10 @@ impl Transpiler {
                     BinaryOp::Mul => format!("({} * {})", l, r),
                     BinaryOp::Div => format!("({} / {})", l, r),
                     BinaryOp::Mod => format!("({} % {})", l, r),
-                    _ => format!("/* Error: Non-Int Op in Native path */")
+                    _ => "/* Error: Non-Int Op in Native path */".to_string()
                 }
             }
-            _ => format!("/* Unreachable Native */")
+            _ => "/* Unreachable Native */".to_string()
         }
     }
 
