@@ -7,7 +7,7 @@ use std::fs;
 
 mod project_builder;
 use project_builder::ProjectBuilder;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 #[derive(Parser)]
