@@ -166,8 +166,12 @@ jobs:
       - name: Install cross-compilation tools (Linux ARM64)
         if: matrix.cross == true
         run: |
+          sudo dpkg --add-architecture arm64
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install -y libssl-dev:arm64
+        env:
+          DEBIAN_FRONTEND: noninteractive
       
       - name: Setup Android NDK
         if: matrix.use_ndk == true
@@ -188,6 +192,9 @@ jobs:
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
+        env:
+          PKG_CONFIG_ALLOW_CROSS: 1
+          OPENSSL_NO_VENDOR: 1
 
       - name: Strip binary (Unix)
         if: matrix.os != 'windows-latest'
