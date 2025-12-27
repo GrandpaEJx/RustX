@@ -83,7 +83,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ===== DESKTOP PLATFORMS =====
+          # ===== DESKTOP PLATFORMS (Reliable) =====
           
           # Linux x86_64
           - platform: Linux x86_64
@@ -91,14 +91,6 @@ jobs:
             target: x86_64-unknown-linux-gnu
             artifact_name: rustx
             asset_name: rustx-linux-x86_64
-          
-          # Linux ARM64
-          - platform: Linux ARM64
-            os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            artifact_name: rustx
-            asset_name: rustx-linux-aarch64
-            cross: true
           
           # macOS Intel
           - platform: macOS Intel
@@ -120,39 +112,6 @@ jobs:
             target: x86_64-pc-windows-msvc
             artifact_name: rustx.exe
             asset_name: rustx-windows-x86_64.exe
-          
-          # ===== MOBILE PLATFORMS =====
-          
-          # Android ARM64 (most common)
-          - platform: Android ARM64
-            os: ubuntu-latest
-            target: aarch64-linux-android
-            artifact_name: rustx
-            asset_name: rustx-android-aarch64
-            use_ndk: true
-          
-          # Android x86_64 (emulators)
-          - platform: Android x86_64
-            os: ubuntu-latest
-            target: x86_64-linux-android
-            artifact_name: rustx
-            asset_name: rustx-android-x86_64
-            use_ndk: true
-          
-          # Android ARMv7 (older devices)
-          - platform: Android ARMv7
-            os: ubuntu-latest
-            target: armv7-linux-androideabi
-            artifact_name: rustx
-            asset_name: rustx-android-armv7
-            use_ndk: true
-          
-          # iOS ARM64 (iPhone/iPad)
-          - platform: iOS ARM64
-            os: macos-latest
-            target: aarch64-apple-ios
-            artifact_name: rustx
-            asset_name: rustx-ios-aarch64
 
     steps:
       - name: Checkout code
@@ -163,43 +122,14 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install OpenSSL (Ubuntu native builds)
-        if: matrix.os == 'ubuntu-latest' && matrix.cross != true && matrix.use_ndk != true
+      - name: Install OpenSSL (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y pkg-config libssl-dev
 
-      - name: Install cross (pre-built)
-        if: matrix.cross == true || matrix.use_ndk == true
-        run: |
-          curl -L https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-gnu.tar.gz | tar xz
-          sudo mv cross /usr/local/bin/
-          cross --version
-      
-      - name: Setup Android NDK
-        if: matrix.use_ndk == true
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r26b
-          add-to-path: true
-      
-      - name: Configure Android environment
-        if: matrix.use_ndk == true
-        run: |
-          echo "CC_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android30-clang" >> $GITHUB_ENV
-          echo "AR_aarch64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> $GITHUB_ENV
-          echo "CC_x86_64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android30-clang" >> $GITHUB_ENV
-          echo "AR_x86_64_linux_android=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> $GITHUB_ENV
-          echo "CC_armv7_linux_androideabi=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi30-clang" >> $GITHUB_ENV
-          echo "AR_armv7_linux_androideabi=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" >> $GITHUB_ENV
-
-      - name: Build (native)
-        if: matrix.cross != true && matrix.use_ndk != true
+      - name: Build
         run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Build (cross-compilation)
-        if: matrix.cross == true || matrix.use_ndk == true
-        run: cross build --release --target ${{ matrix.target }}
 
       - name: Strip binary (Unix)
         if: matrix.os != 'windows-latest'
