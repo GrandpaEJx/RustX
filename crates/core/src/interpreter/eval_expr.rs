@@ -1,9 +1,9 @@
 //! Expression evaluation logic for the interpreter
 
+use super::{Interpreter, InterpreterResult, RuntimeError};
 use crate::ast::Expr;
 use crate::value::Value;
 use std::collections::HashMap;
-use super::{Interpreter, InterpreterResult, RuntimeError};
 
 impl Interpreter {
     /// Evaluates an expression
@@ -16,7 +16,7 @@ impl Interpreter {
                 // Interpolate variables in template string
                 let mut result = String::new();
                 let mut chars = template.chars().peekable();
-                
+
                 while let Some(ch) = chars.next() {
                     if ch == '{' {
                         // Extract variable name
@@ -28,7 +28,7 @@ impl Interpreter {
                             }
                             var_name.push(chars.next().unwrap());
                         }
-                        
+
                         // Get variable value and append to result
                         if !var_name.is_empty() {
                             match self.env.get(&var_name) {
@@ -40,45 +40,71 @@ impl Interpreter {
                         result.push(ch);
                     }
                 }
-                
+
                 Ok(Value::String(result))
             }
             Expr::Bool(b) => Ok(Value::Bool(b)),
             Expr::Null => Ok(Value::Null),
-            Expr::Ident(name) => self.env.get(&name).map_err(|_| RuntimeError::UndefinedVariable(name)),
+            Expr::Ident(name) => self
+                .env
+                .get(&name)
+                .map_err(|_| RuntimeError::UndefinedVariable(name)),
             Expr::Binary { left, op, right } => self.eval_binary(*left, op, *right),
             Expr::Unary { op, expr } => self.eval_unary(op, *expr),
             Expr::Call { callee, args } => self.eval_call(*callee, args),
-            Expr::MethodCall { object, method, args } => {
+            Expr::MethodCall {
+                object,
+                method,
+                args,
+            } => {
                 // Evaluate the object
                 let mut obj_value = self.eval_expr(*object)?;
-                
+
                 // Handle callback-based methods manually (Value doesn't support them)
-                 match method.as_str() {
+                match method.as_str() {
                     "map" => {
-                        if args.len() != 1 { return Err(RuntimeError::ArgumentError("map() requires 1 argument: callback".to_string())); }
+                        if args.len() != 1 {
+                            return Err(RuntimeError::ArgumentError(
+                                "map() requires 1 argument: callback".to_string(),
+                            ));
+                        }
                         return self.logic_map(obj_value, args[0].clone());
-                    },
+                    }
                     "filter" => {
-                        if args.len() != 1 { return Err(RuntimeError::ArgumentError("filter() requires 1 argument: callback".to_string())); }
+                        if args.len() != 1 {
+                            return Err(RuntimeError::ArgumentError(
+                                "filter() requires 1 argument: callback".to_string(),
+                            ));
+                        }
                         return self.logic_filter(obj_value, args[0].clone());
-                    },
+                    }
                     "reduce" => {
-                        if args.is_empty() || args.len() > 2 { return Err(RuntimeError::ArgumentError("reduce() requires 1 or 2 arguments: callback, [initial]".to_string())); }
-                        let initial = if args.len() == 2 { Some(args[1].clone()) } else { None };
+                        if args.is_empty() || args.len() > 2 {
+                            return Err(RuntimeError::ArgumentError(
+                                "reduce() requires 1 or 2 arguments: callback, [initial]"
+                                    .to_string(),
+                            ));
+                        }
+                        let initial = if args.len() == 2 {
+                            Some(args[1].clone())
+                        } else {
+                            None
+                        };
                         return self.logic_reduce(obj_value, args[0].clone(), initial);
-                    },
+                    }
                     _ => {}
-                 }
+                }
 
                 // Evaluate arguments
                 let mut arg_values = Vec::new();
                 for arg in args {
                     arg_values.push(self.eval_expr(arg)?);
                 }
-                
+
                 // Use centralized call_method
-                obj_value.call_method(&method, arg_values).map_err(RuntimeError::from)
+                obj_value
+                    .call_method(&method, arg_values)
+                    .map_err(RuntimeError::from)
             }
             Expr::Array(elements) => {
                 let mut arr = Vec::new();
@@ -151,7 +177,10 @@ impl Interpreter {
                 .get(&key)
                 .cloned()
                 .ok_or_else(|| RuntimeError::from(format!("Key '{}' not found in map", key))),
-            _ => Err(RuntimeError::TypeMismatch { expected: "Array or Map".to_string(), found: "other".to_string() }),
+            _ => Err(RuntimeError::TypeMismatch {
+                expected: "Array or Map".to_string(),
+                found: "other".to_string(),
+            }),
         }
     }
 

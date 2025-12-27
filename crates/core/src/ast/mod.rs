@@ -1,9 +1,9 @@
 //! Abstract Syntax Tree node types for RustX
 
 mod expr;
-mod stmt;
 mod ops;
+mod stmt;
 
 pub use expr::Expr;
-pub use stmt::Stmt;
 pub use ops::{BinaryOp, UnaryOp};
+pub use stmt::Stmt;

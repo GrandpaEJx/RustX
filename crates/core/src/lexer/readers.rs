@@ -1,5 +1,5 @@
-use super::Lexer;
 use super::token::Token;
+use super::Lexer;
 
 /// Skips whitespace (except newlines, which are significant)
 pub(crate) fn skip_whitespace(lexer: &mut Lexer) {
@@ -26,7 +26,7 @@ pub(crate) fn skip_line_comment(lexer: &mut Lexer) {
 pub(crate) fn skip_block_comment(lexer: &mut Lexer) -> Result<(), String> {
     lexer.advance(); // skip '/'
     lexer.advance(); // skip '*'
-    
+
     while let Some(ch) = lexer.current_char {
         if ch == '*' {
             lexer.advance();
@@ -38,7 +38,7 @@ pub(crate) fn skip_block_comment(lexer: &mut Lexer) -> Result<(), String> {
             lexer.advance();
         }
     }
-    
+
     Err("Unterminated block comment".to_string())
 }
 

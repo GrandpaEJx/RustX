@@ -1,6 +1,6 @@
-use crate::ast::{Stmt, Expr};
-use crate::Token;
 use super::Parser;
+use crate::ast::{Expr, Stmt};
+use crate::Token;
 
 /// Parses a statement
 pub fn parse_statement(parser: &mut Parser) -> Result<Stmt, String> {
@@ -18,7 +18,7 @@ pub fn parse_statement(parser: &mut Parser) -> Result<Stmt, String> {
         _ => {
             // Try to parse as assignment or expression
             let expr = parser.parse_expression()?;
-            
+
             // Check for assignment
             if matches!(parser.current_token(), Token::Eq) {
                 if let Expr::Ident(name) = expr {
@@ -27,7 +27,7 @@ pub fn parse_statement(parser: &mut Parser) -> Result<Stmt, String> {
                     return Ok(Stmt::Let { name, value });
                 }
             }
-            
+
             Ok(Stmt::Expr(expr))
         }
     }
@@ -36,7 +36,7 @@ pub fn parse_statement(parser: &mut Parser) -> Result<Stmt, String> {
 /// Parses a variable declaration
 fn parse_declaration(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance(); // consume 'let'
-    
+
     let name = match parser.current_token() {
         Token::Ident(n) => n.clone(),
         _ => return Err("Expected variable name".to_string()),
@@ -44,16 +44,16 @@ fn parse_declaration(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance();
 
     parser.expect(Token::Eq)?;
-    
+
     let value = parser.parse_expression()?;
-    
+
     Ok(Stmt::Let { name, value })
 }
 
 /// Parses a function declaration
 fn parse_function(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance(); // consume 'fn'
-    
+
     let name = match parser.current_token() {
         Token::Ident(n) => n.clone(),
         _ => return Err("Expected function name".to_string()),
@@ -67,7 +67,7 @@ fn parse_function(parser: &mut Parser) -> Result<Stmt, String> {
         if let Token::Ident(param) = parser.current_token() {
             params.push(param.clone());
             parser.advance();
-            
+
             if matches!(parser.current_token(), Token::Comma) {
                 parser.advance();
             }
@@ -92,7 +92,7 @@ fn parse_function(parser: &mut Parser) -> Result<Stmt, String> {
 /// Parses a return statement
 fn parse_return(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance(); // consume 'return'
-    
+
     if matches!(parser.current_token(), Token::Newline | Token::Eof) {
         Ok(Stmt::Return(None))
     } else {
@@ -111,7 +111,7 @@ fn parse_while(parser: &mut Parser) -> Result<Stmt, String> {
 /// Parses a for loop
 fn parse_for(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance(); // consume 'for'
-    
+
     let iterator = match parser.current_token() {
         Token::Ident(name) => name.clone(),
         _ => return Err("Expected iterator variable".to_string()),
@@ -132,13 +132,13 @@ fn parse_for(parser: &mut Parser) -> Result<Stmt, String> {
 /// Parses an import statement
 fn parse_import(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance(); // consume 'import'
-    
+
     let (path, alias) = match parser.current_token() {
         // import "file.rsx" as module
         Token::String(s) => {
             let path = s.clone();
             parser.advance();
-            
+
             let alias = if matches!(parser.current_token(), Token::As) {
                 parser.advance();
                 match parser.current_token() {
@@ -171,20 +171,20 @@ fn parse_import(parser: &mut Parser) -> Result<Stmt, String> {
 /// - use crate "rand" = "0.8" (Rust dependency)
 fn parse_use(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance(); // consume 'use'
-    
+
     match parser.current_token() {
         // use crate "name" = "version" (Rust dependency)
         Token::Crate => {
             parser.advance(); // consume 'crate'
-            
+
             let crate_name = match parser.current_token() {
                 Token::String(s) => s.clone(),
                 _ => return Err("Expected crate name string".to_string()),
             };
             parser.advance();
-            
+
             parser.expect(Token::Eq)?;
-            
+
             let version = match parser.current_token() {
                 Token::String(s) => s.clone(),
                 _ => return Err("Expected version string".to_string()),
@@ -205,7 +205,11 @@ fn parse_use(parser: &mut Parser) -> Result<Stmt, String> {
                 None
             };
 
-            Ok(Stmt::RustImport { crate_name, version, alias })
+            Ok(Stmt::RustImport {
+                crate_name,
+                version,
+                alias,
+            })
         }
         // use json (stdlib module)
         Token::Ident(module_name) => {
@@ -220,14 +224,14 @@ fn parse_use(parser: &mut Parser) -> Result<Stmt, String> {
 /// Parses a rust block
 fn parse_rust_block(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance(); // consume 'rust'
-    
+
     parser.expect(Token::LBrace)?;
-    
+
     // For now, we'll just consume tokens until RBrace and reconstruct the string.
-    
+
     let mut code = String::new();
     let mut brace_count = 1;
-    
+
     while brace_count > 0 {
         match parser.current_token() {
             Token::LBrace => {
@@ -252,9 +256,9 @@ fn parse_rust_block(parser: &mut Parser) -> Result<Stmt, String> {
             }
         }
     }
-    
+
     parser.advance(); // consume final RBrace
-    
+
     Ok(Stmt::RustBlock { code })
 }
 

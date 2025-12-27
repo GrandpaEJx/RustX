@@ -1,4 +1,4 @@
-use crate::ast::{Stmt, Expr};
+use crate::ast::{Expr, Stmt};
 use crate::Token;
 
 pub mod expr;

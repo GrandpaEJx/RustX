@@ -7,7 +7,7 @@ pub enum Token {
     String(String),
     TemplateString(String), // Backtick strings with {var} interpolation
     Bool(bool),
-    
+
     // Identifiers and Keywords
     Ident(String),
     Fn,
@@ -23,7 +23,7 @@ pub enum Token {
     Rust,
     As,
     Let,
-    
+
     // Operators
     Plus,
     Minus,
@@ -40,12 +40,12 @@ pub enum Token {
     And,
     Or,
     Not,
-    Arrow, // =>
-    ThinArrow, // ->
+    Arrow,       // =>
+    ThinArrow,   // ->
     DoubleColon, // ::
-    Hash, // #
-    Question, // ?
-    
+    Hash,        // #
+    Question,    // ?
+
     // Delimiters
     LParen,
     RParen,
@@ -56,9 +56,9 @@ pub enum Token {
     Comma,
     Colon,
     Semicolon,
-    Dot,      // . for method chaining
+    Dot, // . for method chaining
     Newline,
-    
+
     // Special
     Eof,
 }

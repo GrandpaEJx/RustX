@@ -77,7 +77,7 @@ fn colorize(args: Vec<Value>, code: &str) -> Result<Value, String> {
     if args.len() != 1 {
         return Err("Color function expects 1 argument (text)".to_string());
     }
-    
+
     let text = args[0].to_string();
     Ok(Value::String(format!("\x1b[{}m{}\x1b[0m", code, text)))
 }

@@ -131,8 +131,7 @@ fn run_repl() {
     println!("{}", "RustX Language REPL v0.3.0".bright_cyan().bold());
     println!(
         "{}",
-        "Type ':help' for commands, ':exit' or Ctrl+D to quit\n"
-            .bright_black()
+        "Type ':help' for commands, ':exit' or Ctrl+D to quit\n".bright_black()
     );
 
     let mut rl = match DefaultEditor::new() {
@@ -244,14 +243,14 @@ fn run_file(path: &PathBuf, show_ast: bool, show_tokens: bool, show_time: bool, 
             path.display().to_string().bright_white()
         );
     }
-    
+
     // Parse first to check for JIT requirement
     let mut lexer = Lexer::new(&source);
     let tokens = match lexer.tokenize() {
         Ok(t) => t,
         Err(e) => {
-             eprintln!("{} {}", "Lexer Error:".red().bold(), e);
-             std::process::exit(1);
+            eprintln!("{} {}", "Lexer Error:".red().bold(), e);
+            std::process::exit(1);
         }
     };
 
@@ -259,11 +258,11 @@ fn run_file(path: &PathBuf, show_ast: bool, show_tokens: bool, show_time: bool, 
     let ast = match parser.parse() {
         Ok(a) => a,
         Err(e) => {
-             eprintln!("{} {}", "Parser Error:".red().bold(), e);
-             std::process::exit(1);
+            eprintln!("{} {}", "Parser Error:".red().bold(), e);
+            std::process::exit(1);
         }
     };
-    
+
     // Display AST/Tokens if requested (even if JIT)
     if show_tokens {
         println!("{}", "=== Tokens ===".bright_yellow().bold());
@@ -282,21 +281,44 @@ fn run_file(path: &PathBuf, show_ast: bool, show_tokens: bool, show_time: bool, 
 
     if is_jit_required(&ast) {
         if verbose {
-            println!("{}", "JIT compilation required due to native dependencies/blocks.".yellow());
+            println!(
+                "{}",
+                "JIT compilation required due to native dependencies/blocks.".yellow()
+            );
         }
-        
+
         // Check if Rust is available for JIT
         if !check_rust_available() {
-            eprintln!("{}", "Error: Script requires JIT compilation but Rust toolchain is not installed".red().bold());
-            eprintln!("\n{}", "This script uses features that require compilation:".bright_white());
-            eprintln!("  - {} blocks (embedded Rust code)", "rust {}".bright_yellow());
-            eprintln!("  - {} statements (native dependencies)", "rust_import".bright_yellow());
+            eprintln!(
+                "{}",
+                "Error: Script requires JIT compilation but Rust toolchain is not installed"
+                    .red()
+                    .bold()
+            );
+            eprintln!(
+                "\n{}",
+                "This script uses features that require compilation:".bright_white()
+            );
+            eprintln!(
+                "  - {} blocks (embedded Rust code)",
+                "rust {}".bright_yellow()
+            );
+            eprintln!(
+                "  - {} statements (native dependencies)",
+                "rust_import".bright_yellow()
+            );
             eprintln!("\n{}", "To run this script:".bright_cyan().bold());
-            eprintln!("  1. Install Rust from: {}", "https://rustup.rs".bright_blue().underline());
-            eprintln!("  2. Run: {}", format!("rustx {}", path.display()).bright_white());
+            eprintln!(
+                "  1. Install Rust from: {}",
+                "https://rustup.rs".bright_blue().underline()
+            );
+            eprintln!(
+                "  2. Run: {}",
+                format!("rustx {}", path.display()).bright_white()
+            );
             std::process::exit(1);
         }
-        
+
         if let Err(e) = ProjectBuilder::build(&source, &ast, None, true, verbose) {
             eprintln!("{} {}", "JIT Execution Error:".red().bold(), e);
             std::process::exit(1);
@@ -330,15 +352,32 @@ fn run_file(path: &PathBuf, show_ast: bool, show_tokens: bool, show_time: bool, 
 fn build_file(path: &PathBuf, output: Option<PathBuf>) {
     // Check if Rust toolchain is available
     if !check_rust_available() {
-        eprintln!("{}", "Error: JIT compilation requires Rust toolchain".red().bold());
+        eprintln!(
+            "{}",
+            "Error: JIT compilation requires Rust toolchain"
+                .red()
+                .bold()
+        );
         eprintln!("\n{}", "RustX can run scripts in two modes:".bright_white());
-        eprintln!("  {} - Fast startup, no compilation needed (current mode)", "Interpreter".bright_green());
-        eprintln!("  {} - Near-native performance, requires Rust", "JIT Compiler".bright_yellow());
+        eprintln!(
+            "  {} - Fast startup, no compilation needed (current mode)",
+            "Interpreter".bright_green()
+        );
+        eprintln!(
+            "  {} - Near-native performance, requires Rust",
+            "JIT Compiler".bright_yellow()
+        );
         eprintln!("\n{}", "To use JIT compilation:".bright_cyan().bold());
-        eprintln!("  1. Install Rust from: {}", "https://rustup.rs".bright_blue().underline());
+        eprintln!(
+            "  1. Install Rust from: {}",
+            "https://rustup.rs".bright_blue().underline()
+        );
         eprintln!("  2. Run: {}", "rustx build <file>".bright_white());
         eprintln!("\n{}", "To run without Rust:".bright_cyan().bold());
-        eprintln!("  Just use: {}", format!("rustx {}", path.display()).bright_white());
+        eprintln!(
+            "  Just use: {}",
+            format!("rustx {}", path.display()).bright_white()
+        );
         std::process::exit(1);
     }
 
@@ -352,20 +391,27 @@ fn build_file(path: &PathBuf, output: Option<PathBuf>) {
             std::process::exit(1);
         }
     };
-    
+
     // Parse
     let mut lexer = Lexer::new(&source);
     let tokens = lexer.tokenize().expect("Lexer error");
     let mut parser = RxParser::new(tokens);
     let ast = parser.parse().expect("Parser error");
-    
+
     // Build
     if let Err(e) = ProjectBuilder::build(&source, &ast, output, false, true) {
-         eprintln!("{} {}", "Build Error:".red().bold(), e);
-         std::process::exit(1);
+        eprintln!("{} {}", "Build Error:".red().bold(), e);
+        std::process::exit(1);
     }
-    
-    println!("{}", format!("Build completed in {:.2}s", start_time.elapsed().as_secs_f32()).green());
+
+    println!(
+        "{}",
+        format!(
+            "Build completed in {:.2}s",
+            start_time.elapsed().as_secs_f32()
+        )
+        .green()
+    );
 }
 
 /// Checks if Rust toolchain (cargo) is available
@@ -379,7 +425,8 @@ fn check_rust_available() -> bool {
 
 fn is_jit_required(ast: &[rustx_core::ast::Stmt]) -> bool {
     use rustx_core::ast::Stmt;
-    ast.iter().any(|stmt| matches!(stmt, Stmt::RustImport { .. } | Stmt::RustBlock { .. }))
+    ast.iter()
+        .any(|stmt| matches!(stmt, Stmt::RustImport { .. } | Stmt::RustBlock { .. }))
 }
 
 /// Executes source code
@@ -430,7 +477,10 @@ fn print_help() {
     println!("\n{}", "Keyboard Shortcuts:".bright_cyan().bold());
     println!("  {}  - Exit", "Ctrl+D".bright_white());
     println!("  {}  - Interrupt current input", "Ctrl+C".bright_white());
-    println!("  {}  - Navigate command history", "Up/Down arrows".bright_white());
+    println!(
+        "  {}  - Navigate command history",
+        "Up/Down arrows".bright_white()
+    );
 }
 
 /// Checks script syntax without executing
@@ -452,8 +502,8 @@ fn check_file(path: &PathBuf, verbose: bool) {
     let tokens = match lexer.tokenize() {
         Ok(t) => t,
         Err(e) => {
-             eprintln!("{} {}", "Syntax Error (Lexer):".red().bold(), e);
-             std::process::exit(1);
+            eprintln!("{} {}", "Syntax Error (Lexer):".red().bold(), e);
+            std::process::exit(1);
         }
     };
 
@@ -464,8 +514,8 @@ fn check_file(path: &PathBuf, verbose: bool) {
             println!("{}", "Syntax OK".green().bold());
         }
         Err(e) => {
-             eprintln!("{} {}", "Syntax Error (Parser):".red().bold(), e);
-             std::process::exit(1);
+            eprintln!("{} {}", "Syntax Error (Parser):".red().bold(), e);
+            std::process::exit(1);
         }
     }
 }

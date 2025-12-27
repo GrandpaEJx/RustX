@@ -1,6 +1,6 @@
+use super::Parser;
 use crate::ast::{BinaryOp, Expr, UnaryOp};
 use crate::Token;
-use super::Parser;
 
 /// Parses an expression
 pub fn parse_expression(parser: &mut Parser) -> Result<Expr, String> {
@@ -187,33 +187,33 @@ fn parse_postfix(parser: &mut Parser) -> Result<Expr, String> {
             }
             Token::Dot => {
                 parser.advance(); // consume '.'
-                
+
                 // Get method name
                 let method = match parser.current_token() {
                     Token::Ident(name) => name.clone(),
                     _ => return Err("Expected method name after '.'".to_string()),
                 };
                 parser.advance();
-                
+
                 // Check for method call with parentheses
                 let args = if matches!(parser.current_token(), Token::LParen) {
                     parser.advance();
                     let mut args = Vec::new();
-                    
+
                     while !matches!(parser.current_token(), Token::RParen) {
                         args.push(parse_expression(parser)?);
                         if matches!(parser.current_token(), Token::Comma) {
                             parser.advance();
                         }
                     }
-                    
+
                     parser.expect(Token::RParen)?;
                     args
                 } else {
                     // Method call without parentheses (property-like)
                     Vec::new()
                 };
-                
+
                 expr = Expr::MethodCall {
                     object: Box::new(expr),
                     method,
@@ -276,7 +276,9 @@ fn parse_array(parser: &mut Parser) -> Result<Expr, String> {
 
     while !matches!(parser.current_token(), Token::RBracket) {
         parser.skip_newlines();
-        if matches!(parser.current_token(), Token::RBracket) { break; }
+        if matches!(parser.current_token(), Token::RBracket) {
+            break;
+        }
 
         elements.push(parse_expression(parser)?);
         if matches!(parser.current_token(), Token::Comma) {
@@ -316,7 +318,9 @@ fn parse_map_contents(parser: &mut Parser) -> Result<Expr, String> {
 
     while !matches!(parser.current_token(), Token::RBrace) {
         parser.skip_newlines();
-        if matches!(parser.current_token(), Token::RBrace) { break; }
+        if matches!(parser.current_token(), Token::RBrace) {
+            break;
+        }
 
         let key = match parser.current_token() {
             Token::String(s) => s.clone(),

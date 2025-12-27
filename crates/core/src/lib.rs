@@ -1,14 +1,14 @@
-pub mod lexer;
-pub mod compiler;
-pub mod stdlib; // Export stdlib
 pub mod ast;
-pub mod parser;
-pub mod value;
+pub mod compiler;
 pub mod interpreter;
+pub mod lexer;
+pub mod parser;
+pub mod stdlib; // Export stdlib
+pub mod value;
 
+pub use ast::{BinaryOp, Expr, Stmt, UnaryOp};
+pub use interpreter::{Environment, Interpreter};
 pub use lexer::token::Token;
 pub use lexer::Lexer;
-pub use ast::{Expr, Stmt, BinaryOp, UnaryOp};
 pub use parser::Parser;
 pub use value::Value;
-pub use interpreter::{Interpreter, Environment};

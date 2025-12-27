@@ -1,12 +1,17 @@
 //! Binary and unary operation evaluation for the interpreter
 
+use super::{Interpreter, InterpreterResult, RuntimeError};
 use crate::ast::{BinaryOp, Expr, UnaryOp};
 use crate::value::Value;
-use super::{Interpreter, InterpreterResult, RuntimeError};
 
 impl Interpreter {
     /// Evaluates a binary operation
-    pub(super) fn eval_binary(&mut self, left: Expr, op: BinaryOp, right: Expr) -> InterpreterResult<Value> {
+    pub(super) fn eval_binary(
+        &mut self,
+        left: Expr,
+        op: BinaryOp,
+        right: Expr,
+    ) -> InterpreterResult<Value> {
         let left_val = self.eval_expr(left)?;
         let right_val = self.eval_expr(right)?;
 

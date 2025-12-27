@@ -1,4 +1,4 @@
-use rustx_macros::{rx, rsx};
+use rustx_macros::{rsx, rx};
 
 #[test]
 fn test_rx_macro_integer() {

@@ -1,8 +1,8 @@
 //! Statement evaluation logic for the interpreter
 
+use super::{Interpreter, InterpreterResult, RuntimeError};
 use crate::ast::{Expr, Stmt};
 use crate::value::Value;
-use super::{Interpreter, InterpreterResult, RuntimeError};
 
 impl Interpreter {
     /// Evaluates a statement

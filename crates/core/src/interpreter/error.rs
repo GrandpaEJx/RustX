@@ -16,7 +16,11 @@ impl fmt::Display for RuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             RuntimeError::TypeMismatch { expected, found } => {
-                write!(f, "TypeMismatch: Expected {}, but found {}", expected, found)
+                write!(
+                    f,
+                    "TypeMismatch: Expected {}, but found {}",
+                    expected, found
+                )
             }
             RuntimeError::UndefinedVariable(name) => {
                 write!(f, "UndefinedVariable: Variable '{}' is not defined", name)

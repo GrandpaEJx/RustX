@@ -1,8 +1,8 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
-pub mod token;
 pub mod readers;
+pub mod token;
 
 use token::Token;
 
@@ -81,12 +81,12 @@ impl<'a> Lexer<'a> {
                 let token = match ch {
                     '+' => Token::Plus,
                     '-' => {
-                         if let Some(&'>') = self.peek() {
-                             self.advance();
-                             self.advance();
-                             return Ok(Token::ThinArrow);
-                         }
-                         Token::Minus
+                        if let Some(&'>') = self.peek() {
+                            self.advance();
+                            self.advance();
+                            return Ok(Token::ThinArrow);
+                        }
+                        Token::Minus
                     }
                     '*' => Token::Star,
                     '/' => Token::Slash,
@@ -99,12 +99,12 @@ impl<'a> Lexer<'a> {
                     ']' => Token::RBracket,
                     ',' => Token::Comma,
                     ':' => {
-                         if let Some(&':') = self.peek() {
-                             self.advance();
-                             self.advance();
-                             return Ok(Token::DoubleColon);
-                         }
-                         Token::Colon
+                        if let Some(&':') = self.peek() {
+                            self.advance();
+                            self.advance();
+                            return Ok(Token::DoubleColon);
+                        }
+                        Token::Colon
                     }
                     ';' => Token::Semicolon,
                     '.' => Token::Dot,
@@ -176,7 +176,7 @@ impl<'a> Lexer<'a> {
     /// Tokenizes the entire input into a vector of tokens
     pub fn tokenize(&mut self) -> Result<Vec<Token>, String> {
         let mut tokens = Vec::new();
-        
+
         loop {
             let token = self.next_token()?;
             if token == Token::Eof {
@@ -185,7 +185,7 @@ impl<'a> Lexer<'a> {
             }
             tokens.push(token);
         }
-        
+
         Ok(tokens)
     }
 }
@@ -199,7 +199,7 @@ mod tests {
         let input = "x = 10 + 20";
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize().unwrap();
-        
+
         assert_eq!(tokens[0], Token::Ident("x".to_string()));
         assert_eq!(tokens[1], Token::Eq);
         assert_eq!(tokens[2], Token::Int(10));
@@ -212,7 +212,7 @@ mod tests {
         let input = "// comment\nx = 5";
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize().unwrap();
-        
+
         assert_eq!(tokens[0], Token::Newline);
         assert_eq!(tokens[1], Token::Ident("x".to_string()));
     }
@@ -222,7 +222,7 @@ mod tests {
         let input = "/* block\ncomment */ x = 5";
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize().unwrap();
-        
+
         assert_eq!(tokens[0], Token::Ident("x".to_string()));
     }
 }
