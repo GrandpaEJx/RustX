@@ -1,0 +1,3 @@
+# RustX language files syntax highlighting
+*.rsx linguist-language=Rust
+*.rsx linguist-detectable=true
