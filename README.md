@@ -7,35 +7,35 @@
 
 ## Quick Start
 
-### Install from Crates.io
+### Option 1: Download Pre-built Binary (No Rust Required!)
 
 ```bash
-cargo install rustx-lang
+# Linux/macOS - One-line installer
+curl -sSL https://raw.githubusercontent.com/GrandpaEJx/RustX/main/install.sh | bash
+
+# Or download manually from GitHub Releases
+# https://github.com/GrandpaEJx/RustX/releases/latest
 ```
 
-### Or Build from Source
+See [INSTALL.md](INSTALL.md) for detailed installation instructions.
+
+### Option 2: Install via Cargo (Requires Rust)
 
 ```bash
-git clone https://github.com/GrandpaEJx/RustX.git
-cd RustX
-cargo build --release
+cargo install --git https://github.com/GrandpaEJx/RustX rustx
 ```
 
 ### Run a Script
 
 ```bash
-# If installed via cargo install
-rustx_lang examples/basic.rsx
-
-# If built from source
-cargo run --bin rustx_lang -- examples/basic.rsx
+rustx examples/basic.rsx
 ```
 
-### Compile to Binary <0.3.0>
+### Compile to Binary (Requires Rust)
 
 ```bash
 # Compile a script to a standalone executable
-rustx_lang build examples/basic.rsx --output my_app
+rustx build examples/basic.rsx --output my_app
 
 # Run the compiled binary
 ./my_app
@@ -44,11 +44,7 @@ rustx_lang build examples/basic.rsx --output my_app
 ### Start REPL
 
 ```bash
-# If installed via cargo install
-rustx_lang repl
-
-# If built from source
-cargo run --bin rustx_lang repl
+rustx repl
 ```
 
 ## Hello World
@@ -64,11 +60,28 @@ print(`Hello, {name}!`)
 - 🔗 **Rust Integration** - Use RustX in Rust via macros
 - 📦 **Rich Built-ins** - 15+ built-in functions
 - 🌐 **Web Framework** - Build high-performance web servers (67k+ RPS)
-- 🔌 **Standard Library** - web, json, time, http, os modules
+- 🔌 **Standard Library** - web, json, time, http, os, fs, term modules
 - 🎯 **Template Strings** - Backtick strings with `{var}` interpolation
 - 🛠️ **Compiler** - Transpiles to Rust for native performance
 - 🔄 **REPL** - Interactive shell with history
 - ⚡ **Fast** - Tree-walk interpreter written in Rust
+- 🎁 **Standalone** - No Rust required for interpreter mode
+
+## Interpreter vs JIT
+
+RustX runs in **two modes**:
+
+| Mode | Speed | Requires Rust | Use Case |
+|------|-------|---------------|----------|
+| **Interpreter** | Fast startup | ❌ No | Most scripts, prototyping |
+| **JIT Compiler** | ~6x faster than Node.js | ✅ Yes | Performance-critical code |
+
+**Interpreter mode is the default** - just run `rustx script.rsx` and it works immediately!
+
+JIT compilation is only needed for:
+- `rust {}` blocks (embedded Rust code)
+- `rust_import` statements (native dependencies)
+- Maximum performance (see [benchmarks](benchmarks/LANG_COMPARISON.md))
 
 ## Language Basics
 
