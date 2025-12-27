@@ -65,7 +65,7 @@ impl Optimizer {
             }
             Stmt::Expr(e) | Stmt::Return(Some(e)) => self.analyze_expr(e),
             Stmt::Return(None) => {},
-            Stmt::Import { .. } | Stmt::RustImport { .. } | Stmt::RustBlock { .. } => {},
+            Stmt::Use { .. } | Stmt::Import { .. } | Stmt::RustImport { .. } | Stmt::RustBlock { .. } => {},
         }
     }
     
@@ -117,27 +117,41 @@ impl Transpiler {
     }
 
     pub fn transpile(&mut self, stmts: &[Stmt]) -> String {
-        // 1. Run Analysis
+        // 1. Collect used modules
+        let used_modules = Self::collect_used_modules(stmts);
+        
+        // 2. Run Analysis
         let mut optimizer = Optimizer::new();
         optimizer.analyze(stmts);
         
         self.code.clear();
         self.code.push_str("use rustx_core::value::Value;\n");
-        self.code.push_str("use std::collections::HashMap;\n");
-        self.code.push_str("use std::sync::{Arc, OnceLock};\n\n");
-        self.code.push_str("static JSON: OnceLock<Value> = OnceLock::new();\n");
-        self.code.push_str("static HTTP: OnceLock<Value> = OnceLock::new();\n");
-        self.code.push_str("static OS: OnceLock<Value> = OnceLock::new();\n");
-        self.code.push_str("static TIME: OnceLock<Value> = OnceLock::new();\n");
-        self.code.push_str("static WEB: OnceLock<Value> = OnceLock::new();\n\n");
+        
+        // Only add imports if modules are used
+        if !used_modules.is_empty() {
+            self.code.push_str("use std::collections::HashMap;\n");
+            self.code.push_str("use std::sync::{Arc, OnceLock};\n\n");
+            
+            // Only declare used module statics
+            for module in &used_modules {
+                let mod_upper = module.to_uppercase();
+                self.code.push_str(&format!("static {}: OnceLock<Value> = OnceLock::new();\n", mod_upper));
+            }
+            self.code.push_str("\n");
+        } else {
+            self.code.push_str("\n");
+        }
+        
         self.code.push_str("#[allow(unreachable_code)]\nfn main() -> Result<(), String> {\n");
         self.indent_level += 1;
-        self.push_line("// Stdlib Init");
-        self.push_line("    let mut map = HashMap::new(); map.insert(\"parse\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::json::parse))); map.insert(\"stringify\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::json::stringify))); JSON.set(Value::Map(map)).ok();");
-        self.push_line("    let mut map = HashMap::new(); map.insert(\"get\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::http::get))); map.insert(\"post\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::http::post))); HTTP.set(Value::Map(map)).ok();");
-        self.push_line("    let mut map = HashMap::new(); map.insert(\"env\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::os::env))); map.insert(\"args\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::os::args))); OS.set(Value::Map(map)).ok();");
-        self.push_line("    let mut map = HashMap::new(); map.insert(\"now\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::time::now))); map.insert(\"sleep\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::time::sleep))); TIME.set(Value::Map(map)).ok();");
-        self.push_line("    let mut map = HashMap::new(); map.insert(\"app\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::web::app))); map.insert(\"json\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::web::json))); WEB.set(Value::Map(map)).ok();");
+        
+        // Only initialize used modules
+        if !used_modules.is_empty() {
+            self.push_line("// Stdlib Init");
+            for module in &used_modules {
+                self.generate_module_init(module);
+            }
+        }
 
         for stmt in stmts {
             self.transpile_stmt_optimized(stmt, &optimizer.vars);
@@ -151,6 +165,46 @@ impl Transpiler {
     fn push_line(&mut self, line: &str) {
         let indent = "    ".repeat(self.indent_level);
         self.code.push_str(&format!("{}{}\n", indent, line));
+    }
+    
+    /// Collects all used stdlib modules from use statements
+    fn collect_used_modules(stmts: &[Stmt]) -> HashSet<String> {
+        let mut modules = HashSet::new();
+        for stmt in stmts {
+            if let Stmt::Use { module } = stmt {
+                modules.insert(module.clone());
+            }
+        }
+        modules
+    }
+    
+    /// Generates initialization code for a specific stdlib module
+    fn generate_module_init(&mut self, module: &str) {
+        let mod_upper = module.to_uppercase();
+        match module {
+            "json" => {
+                self.push_line(&format!("    let mut map = HashMap::new(); map.insert(\"parse\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::json::parse))); map.insert(\"stringify\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::json::stringify))); {}.set(Value::Map(map)).ok();", mod_upper));
+            }
+            "http" => {
+                self.push_line(&format!("    let mut map = HashMap::new(); map.insert(\"get\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::http::get))); map.insert(\"post\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::http::post))); {}.set(Value::Map(map)).ok();", mod_upper));
+            }
+            "os" => {
+                self.push_line(&format!("    let mut map = HashMap::new(); map.insert(\"env\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::os::env))); map.insert(\"args\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::os::args))); {}.set(Value::Map(map)).ok();", mod_upper));
+            }
+            "time" => {
+                self.push_line(&format!("    let mut map = HashMap::new(); map.insert(\"now\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::time::now))); map.insert(\"sleep\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::time::sleep))); {}.set(Value::Map(map)).ok();", mod_upper));
+            }
+            "web" => {
+                self.push_line(&format!("    let mut map = HashMap::new(); map.insert(\"app\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::web::app))); map.insert(\"json\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::web::json))); {}.set(Value::Map(map)).ok();", mod_upper));
+            }
+            "fs" => {
+                self.push_line(&format!("    let mut map = HashMap::new(); map.insert(\"read\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::fs::read))); map.insert(\"write\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::fs::write))); {}.set(Value::Map(map)).ok();", mod_upper));
+            }
+            "term" => {
+                self.push_line(&format!("    let mut map = HashMap::new(); map.insert(\"clear\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::term::clear))); map.insert(\"red\".to_string(), Value::NativeFunction(std::sync::Arc::new(rustx_core::stdlib::term::red))); {}.set(Value::Map(map)).ok();", mod_upper));
+            }
+            _ => {}
+        }
     }
     fn enter_scope(&mut self) { self.scopes.push(HashSet::new()); }
     fn exit_scope(&mut self) { self.scopes.pop(); }
@@ -211,6 +265,10 @@ impl Transpiler {
                 } else {
                     self.push_line("return Ok(Value::Null);");
                 }
+             }
+             Stmt::Use { .. } => {
+                 // No-op: Use statements are handled during initialization
+                 // Modules are tracked and initialized at the top of main()
              }
              Stmt::Import { .. } => {
                 self.push_line("// Import ignored in transpiler");

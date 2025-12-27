@@ -35,7 +35,12 @@ pub enum Stmt {
         body: Box<super::Expr>,
     },
     
-    // Import statement
+    // Use statement (stdlib imports: use json, use os)
+    Use {
+        module: String,
+    },
+    
+    // Import statement (file imports: import 'file.rsx' as name)
     Import {
         path: String,
         alias: Option<String>,

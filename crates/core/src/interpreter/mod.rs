@@ -44,74 +44,15 @@ impl Interpreter {
 
     /// Initializes built-in functions
     fn init_builtins(&mut self) {
-        // Core builtins
+        // Core builtins (always available)
         self.env.set("print".to_string(), Value::NativeFunction(std::sync::Arc::new(|args: Vec<Value>| {
             let text = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>().join(" ");
             println!("{}", text);
             Ok(Value::Null)
         })));
-
-        // JSON
-        let mut json_mod = HashMap::new();
-        json_mod.insert("parse".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::json::parse)));
-        json_mod.insert("stringify".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::json::stringify)));
-        self.env.set("json".to_string(), Value::Map(json_mod));
         
-        // HTTP
-        let mut http_mod = HashMap::new();
-        http_mod.insert("get".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::http::get)));
-        http_mod.insert("post".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::http::post)));
-        self.env.set("http".to_string(), Value::Map(http_mod));
-        
-        // OS
-        let mut os_mod = HashMap::new();
-        os_mod.insert("env".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::os::env)));
-        os_mod.insert("args".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::os::args)));
-        self.env.set("os".to_string(), Value::Map(os_mod));
-        
-        // Time
-        let mut time_mod = HashMap::new();
-        time_mod.insert("now".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::time::now)));
-        time_mod.insert("sleep".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::time::sleep)));
-        self.env.set("time".to_string(), Value::Map(time_mod));
-        
-        // Web
-        let mut web_mod = HashMap::new();
-        web_mod.insert("app".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::web::app)));
-        web_mod.insert("json".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::web::json)));
-        self.env.set("web".to_string(), Value::Map(web_mod));
-
-        // FS
-        let mut fs_mod = HashMap::new();
-        fs_mod.insert("read".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::read)));
-        fs_mod.insert("write".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::write)));
-        fs_mod.insert("append".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::append)));
-        fs_mod.insert("exists".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::exists)));
-        fs_mod.insert("remove".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::remove)));
-        self.env.set("fs".to_string(), Value::Map(fs_mod));
-
-        // Term
-        let mut term_mod = HashMap::new();
-        term_mod.insert("red".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::red)));
-        term_mod.insert("green".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::green)));
-        term_mod.insert("blue".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::blue)));
-        term_mod.insert("yellow".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::yellow)));
-        term_mod.insert("cyan".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::cyan)));
-        term_mod.insert("magenta".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::magenta)));
-        term_mod.insert("white".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::white)));
-        term_mod.insert("bg_red".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_red)));
-        term_mod.insert("bg_green".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_green)));
-        term_mod.insert("bg_blue".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_blue)));
-        term_mod.insert("bg_yellow".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_yellow)));
-        term_mod.insert("bg_cyan".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_cyan)));
-        term_mod.insert("bg_magenta".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_magenta)));
-        term_mod.insert("bg_white".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bg_white)));
-        term_mod.insert("bold".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::bold)));
-        term_mod.insert("dim".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::dim)));
-        term_mod.insert("italic".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::italic)));
-        term_mod.insert("clear".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::clear)));
-        term_mod.insert("underline".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::underline)));
-        self.env.set("term".to_string(), Value::Map(term_mod));
+        // Note: Stdlib modules (json, http, os, time, web, fs, term) are 
+        // loaded on-demand via 'use' statements for better performance
     }
 
     /// Evaluates a program (list of statements)
@@ -238,6 +179,75 @@ impl Interpreter {
         self.loading_modules.borrow_mut().remove(&canonical_path);
         
         Ok(exports)
+    }
+    
+    /// Lazy-loads a stdlib module on first use
+    pub(super) fn load_stdlib_module(&mut self, name: &str) -> InterpreterResult<Value> {
+        match name {
+            "json" => {
+                let mut json_mod = HashMap::new();
+                json_mod.insert("parse".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::json::parse)));
+                json_mod.insert("stringify".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::json::stringify)));
+                let module = Value::Map(json_mod);
+                self.env.set("json".to_string(), module.clone());
+                Ok(module)
+            }
+            "http" => {
+                let mut http_mod = HashMap::new();
+                http_mod.insert("get".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::http::get)));
+                http_mod.insert("post".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::http::post)));
+                let module = Value::Map(http_mod);
+                self.env.set("http".to_string(), module.clone());
+                Ok(module)
+            }
+            "os" => {
+                let mut os_mod = HashMap::new();
+                os_mod.insert("env".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::os::env)));
+                os_mod.insert("args".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::os::args)));
+                let module = Value::Map(os_mod);
+                self.env.set("os".to_string(), module.clone());
+                Ok(module)
+            }
+            "time" => {
+                let mut time_mod = HashMap::new();
+                time_mod.insert("now".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::time::now)));
+                time_mod.insert("sleep".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::time::sleep)));
+                let module = Value::Map(time_mod);
+                self.env.set("time".to_string(), module.clone());
+                Ok(module)
+            }
+            "web" => {
+                let mut web_mod = HashMap::new();
+                web_mod.insert("app".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::web::app)));
+                web_mod.insert("json".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::web::json)));
+                let module = Value::Map(web_mod);
+                self.env.set("web".to_string(), module.clone());
+                Ok(module)
+            }
+            "fs" => {
+                let mut fs_mod = HashMap::new();
+                fs_mod.insert("read".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::read)));
+                fs_mod.insert("write".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::write)));
+                fs_mod.insert("exists".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::exists)));
+                fs_mod.insert("remove".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::remove)));
+                fs_mod.insert("append".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::fs::append)));
+                let module = Value::Map(fs_mod);
+                self.env.set("fs".to_string(), module.clone());
+                Ok(module)
+            }
+            "term" => {
+                let mut term_mod = HashMap::new();
+                term_mod.insert("red".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::red)));
+                term_mod.insert("green".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::green)));
+                term_mod.insert("blue".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::blue)));
+                term_mod.insert("yellow".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::yellow)));
+                term_mod.insert("clear".to_string(), Value::NativeFunction(std::sync::Arc::new(crate::stdlib::term::clear)));
+                let module = Value::Map(term_mod);
+                self.env.set("term".to_string(), module.clone());
+                Ok(module)
+            }
+            _ => Err(RuntimeError::ImportError(format!("Unknown stdlib module: '{}'", name)))
+        }
     }
 }
 

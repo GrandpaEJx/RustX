@@ -166,41 +166,55 @@ fn parse_import(parser: &mut Parser) -> Result<Stmt, String> {
     Ok(Stmt::Import { path, alias })
 }
 
-/// Parses a use statement (e.g., use crate "rand" = "0.8")
+/// Parses a use statement
+/// - use json (stdlib module)
+/// - use crate "rand" = "0.8" (Rust dependency)
 fn parse_use(parser: &mut Parser) -> Result<Stmt, String> {
     parser.advance(); // consume 'use'
     
-    parser.expect(Token::Crate)?; // consume 'crate'
-    
-    let crate_name = match parser.current_token() {
-        Token::String(s) => s.clone(),
-        _ => return Err("Expected crate name string".to_string()),
-    };
-    parser.advance();
-    
-    parser.expect(Token::Eq)?;
-    
-    let version = match parser.current_token() {
-        Token::String(s) => s.clone(),
-        _ => return Err("Expected version string".to_string()),
-    };
-    parser.advance();
+    match parser.current_token() {
+        // use crate "name" = "version" (Rust dependency)
+        Token::Crate => {
+            parser.advance(); // consume 'crate'
+            
+            let crate_name = match parser.current_token() {
+                Token::String(s) => s.clone(),
+                _ => return Err("Expected crate name string".to_string()),
+            };
+            parser.advance();
+            
+            parser.expect(Token::Eq)?;
+            
+            let version = match parser.current_token() {
+                Token::String(s) => s.clone(),
+                _ => return Err("Expected version string".to_string()),
+            };
+            parser.advance();
 
-    let alias = if matches!(parser.current_token(), Token::As) {
-        parser.advance();
-        match parser.current_token() {
-            Token::Ident(name) => {
-                let alias_name = name.clone();
+            let alias = if matches!(parser.current_token(), Token::As) {
                 parser.advance();
-                Some(alias_name)
-            }
-            _ => return Err("Expected alias name".to_string()),
-        }
-    } else {
-        None
-    };
+                match parser.current_token() {
+                    Token::Ident(name) => {
+                        let alias_name = name.clone();
+                        parser.advance();
+                        Some(alias_name)
+                    }
+                    _ => return Err("Expected alias name".to_string()),
+                }
+            } else {
+                None
+            };
 
-    Ok(Stmt::RustImport { crate_name, version, alias })
+            Ok(Stmt::RustImport { crate_name, version, alias })
+        }
+        // use json (stdlib module)
+        Token::Ident(module_name) => {
+            let module = module_name.clone();
+            parser.advance();
+            Ok(Stmt::Use { module })
+        }
+        _ => Err("Expected stdlib module name or 'crate'".to_string()),
+    }
 }
 
 /// Parses a rust block

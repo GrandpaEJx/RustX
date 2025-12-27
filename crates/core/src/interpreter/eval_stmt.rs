@@ -95,6 +95,20 @@ impl Interpreter {
 
                 Ok(last_value)
             }
+            Stmt::Use { module } => {
+                //Lazy-load stdlib module on first use
+                let stdlib_modules = ["web", "json", "http", "os", "time", "fs", "term"];
+                
+                if !stdlib_modules.contains(&module.as_str()) {
+                    return Err(RuntimeError::ImportError(
+                        format!("Unknown stdlib module: '{}'. Available modules: {:?}", module, stdlib_modules)
+                    ));
+                }
+                
+                // Load module (this will set it in environment)
+                self.load_stdlib_module(&module)?;
+                Ok(Value::Null)
+            }
             Stmt::Import { path, alias } => {
                 // Check if this is a stdlib module import
                 let stdlib_modules = ["web", "json", "http", "os", "time", "fs", "term"];
