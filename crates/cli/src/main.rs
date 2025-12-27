@@ -13,13 +13,23 @@ use std::time::Instant;
 #[derive(Parser)]
 #[command(name = "rustx")]
 #[command(about = "RustX Language Interpreter", long_about = None)]
-#[command(version = "0.3.0")]
+#[command(version = "0.5.0")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
 
     /// Script file to execute
     file: Option<PathBuf>,
+
+    /// Compile to binary (shorthand for 'build')
+    /// Usage: rustx -o script.rsx [output_name]
+    #[arg(short = 'o', long = "output", value_name = "NAME")]
+    output: Option<Option<String>>,
+
+    /// Transpile to Rust source (don't compile)
+    /// Usage: rustx --rs script.rsx [output.rs]
+    #[arg(long = "rs", value_name = "FILE")]
+    transpile_output: Option<Option<String>>,
 
     /// Show AST (Abstract Syntax Tree)
     #[arg(long)]
@@ -78,6 +88,7 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
 
+    // Priority: subcommands > flags > default
     match cli.command {
         Some(Commands::Repl) => run_repl(),
         Some(Commands::Run {
@@ -90,9 +101,25 @@ fn main() {
         Some(Commands::Build { file, output }) => build_file(&file, output),
         Some(Commands::Check { file, verbose }) => check_file(&file, verbose),
         None => {
-            if let Some(file) = cli.file {
+            // Handle flag-based commands
+            if cli.transpile_output.is_some() {
+                // Transpile mode: rustx --rs script.rsx [output.rs]
+                let file = cli.file.expect("File required for transpile");
+                let output = cli.transpile_output.flatten().map(PathBuf::from);
+                transpile_file(&file, output);
+            } else if cli.output.is_some() {
+                // Build mode: rustx -o script.rsx [output_name]
+                let file = cli.file.expect("File required for build");
+                let output = match cli.output.flatten() {
+                    Some(name) => Some(PathBuf::from(name)),
+                    None => Some(infer_output_name(&file)),
+                };
+                build_file(&file, output);
+            } else if let Some(file) = cli.file {
+                // Default: run in interpreter
                 run_file(&file, cli.ast, cli.tokens, cli.time, cli.verbose);
             } else {
+                // No file: start REPL
                 run_repl();
             }
         }
@@ -257,6 +284,19 @@ fn run_file(path: &PathBuf, show_ast: bool, show_tokens: bool, show_time: bool, 
         if verbose {
             println!("{}", "JIT compilation required due to native dependencies/blocks.".yellow());
         }
+        
+        // Check if Rust is available for JIT
+        if !check_rust_available() {
+            eprintln!("{}", "Error: Script requires JIT compilation but Rust toolchain is not installed".red().bold());
+            eprintln!("\n{}", "This script uses features that require compilation:".bright_white());
+            eprintln!("  - {} blocks (embedded Rust code)", "rust {}".bright_yellow());
+            eprintln!("  - {} statements (native dependencies)", "rust_import".bright_yellow());
+            eprintln!("\n{}", "To run this script:".bright_cyan().bold());
+            eprintln!("  1. Install Rust from: {}", "https://rustup.rs".bright_blue().underline());
+            eprintln!("  2. Run: {}", format!("rustx {}", path.display()).bright_white());
+            std::process::exit(1);
+        }
+        
         if let Err(e) = ProjectBuilder::build(&source, &ast, None, true, verbose) {
             eprintln!("{} {}", "JIT Execution Error:".red().bold(), e);
             std::process::exit(1);
@@ -288,6 +328,20 @@ fn run_file(path: &PathBuf, show_ast: bool, show_tokens: bool, show_time: bool, 
 
 /// Compiles a script file
 fn build_file(path: &PathBuf, output: Option<PathBuf>) {
+    // Check if Rust toolchain is available
+    if !check_rust_available() {
+        eprintln!("{}", "Error: JIT compilation requires Rust toolchain".red().bold());
+        eprintln!("\n{}", "RustX can run scripts in two modes:".bright_white());
+        eprintln!("  {} - Fast startup, no compilation needed (current mode)", "Interpreter".bright_green());
+        eprintln!("  {} - Near-native performance, requires Rust", "JIT Compiler".bright_yellow());
+        eprintln!("\n{}", "To use JIT compilation:".bright_cyan().bold());
+        eprintln!("  1. Install Rust from: {}", "https://rustup.rs".bright_blue().underline());
+        eprintln!("  2. Run: {}", "rustx build <file>".bright_white());
+        eprintln!("\n{}", "To run without Rust:".bright_cyan().bold());
+        eprintln!("  Just use: {}", format!("rustx {}", path.display()).bright_white());
+        std::process::exit(1);
+    }
+
     let start_time = Instant::now();
     println!("{} {}", "Compiling:".bright_blue().bold(), path.display());
 
@@ -312,6 +366,15 @@ fn build_file(path: &PathBuf, output: Option<PathBuf>) {
     }
     
     println!("{}", format!("Build completed in {:.2}s", start_time.elapsed().as_secs_f32()).green());
+}
+
+/// Checks if Rust toolchain (cargo) is available
+fn check_rust_available() -> bool {
+    std::process::Command::new("cargo")
+        .arg("--version")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
 }
 
 fn is_jit_required(ast: &[rustx_core::ast::Stmt]) -> bool {
@@ -403,6 +466,74 @@ fn check_file(path: &PathBuf, verbose: bool) {
         Err(e) => {
              eprintln!("{} {}", "Syntax Error (Parser):".red().bold(), e);
              std::process::exit(1);
+        }
+    }
+}
+
+/// Infers output binary name from input file path
+/// Example: "path/to/script.rsx" -> "script"
+fn infer_output_name(input: &PathBuf) -> PathBuf {
+    input
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .map(|s| PathBuf::from(s))
+        .unwrap_or_else(|| PathBuf::from("output"))
+}
+
+/// Transpiles a script to Rust source code without compiling
+fn transpile_file(path: &PathBuf, output: Option<PathBuf>) {
+    println!("{} {}", "Transpiling:".bright_blue().bold(), path.display());
+
+    let source = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("{} {}", "Error reading file:".red().bold(), e);
+            std::process::exit(1);
+        }
+    };
+
+    // Parse
+    let mut lexer = Lexer::new(&source);
+    let tokens = match lexer.tokenize() {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("{} {}", "Lexer Error:".red().bold(), e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut parser = RxParser::new(tokens);
+    let ast = match parser.parse() {
+        Ok(a) => a,
+        Err(e) => {
+            eprintln!("{} {}", "Parser Error:".red().bold(), e);
+            std::process::exit(1);
+        }
+    };
+
+    // Transpile
+    use rustx_core::compiler::transpiler::Transpiler;
+    let mut transpiler = Transpiler::new();
+    let rust_code = transpiler.transpile(&ast);
+
+    // Determine output filename
+    let output_path = output.unwrap_or_else(|| {
+        let stem = path.file_stem().unwrap().to_str().unwrap();
+        PathBuf::from(format!("{}.rs", stem))
+    });
+
+    // Write
+    match fs::write(&output_path, rust_code) {
+        Ok(_) => {
+            println!(
+                "{} {}",
+                "✓ Transpiled to:".green().bold(),
+                output_path.display().to_string().bright_white()
+            );
+        }
+        Err(e) => {
+            eprintln!("{} {}", "Error writing file:".red().bold(), e);
+            std::process::exit(1);
         }
     }
 }
