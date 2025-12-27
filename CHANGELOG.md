@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2025-12-27
+
+### Added
+- **Enhanced CLI Interface**
+  - Added `-o` flag for build output (shorthand for `rustx build`)
+  - Added `--rs` flag for transpile-only mode (generate Rust source without compiling)
+  - Smart output naming: auto-infers binary name from input file
+  - Example: `rustx script.rsx -o` creates `./script` binary
+  - Example: `rustx script.rsx --rs` creates `script.rs`
+
+- **Standalone Binary Support**
+  - Rust toolchain detection with helpful error messages
+  - Graceful fallback when JIT features require Rust
+  - Installation script (`install.sh`) for pre-built binaries
+  - Comprehensive `INSTALL.md` guide
+  - Optimized release profile (stripped, LTO enabled)
+  
+- **JIT Compiler Optimization**
+  - Type inference for native code generation (~6x faster than Node.js)
+  - Single build sandbox for faster recompilation
+  - Native `i64` and `bool` code paths for numeric operations
+  
+- **Benchmark Suite**
+  - Language comparison benchmarks (Python, Node.js, RustX)
+  - Automated reporting with `compare.sh`
+  - Performance metrics: Time, CPU%, RAM
+
+### Changed
+- Default mode is now interpreter (no Rust required)
+- JIT compilation requires explicit `build` command or `-o` flag
+- Improved error messages explaining Interpreter vs JIT modes
+- Updated README with standalone binary installation
+
+### Performance
+- Loop benchmarks: **13.59ms** (vs Node.js 45ms, Python 240ms)
+- Fibonacci(30): **11.77ms** (vs Node.js 73ms, Python 170ms)
+
 ## [0.4.0] - 2025-12-14
 
 ### Added
